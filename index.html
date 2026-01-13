@@ -34,7 +34,8 @@
         const { createRoot } = ReactDOM;
 
         // --- 1. DATA ---
-        const API_KEY = "AIzaSyBYd4jCxHZohdIHdu6fCmlU7JFvD2wAL2c"; 
+        // The key is injected by the server
+        const API_KEY = window.ENV_API_KEY; 
 
         const COURSE_DATA = [
             { hole: 1, par: 5, si: 16, dist: 473, tip: "Wide fairway 🌴. Good warm up." },
