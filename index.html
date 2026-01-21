@@ -85,7 +85,7 @@
         // --- COMPONENTS ---
         
         // 1. DASHBOARD
-        const Dashboard = ({ user, setView, setPlayers, players }) => {
+        const Dashboard = ({ user, setView }) => {
             const [weather, setWeather] = useState({ temp: 28, wind: 12, cond: '☀️' });
             
             return (
@@ -198,10 +198,11 @@
             );
         };
 
-        // 3. TOURNAMENT SETUP (Rich)
-        const SetupView = ({ setView, setPlayers, players }) => {
+        // 3. TOURNAMENT SETUP (Updated with Format Selection)
+        const SetupView = ({ setView, setPlayers, setGameFormat }) => {
             const [localPlayers, setLocalPlayers] = useState([{id:0, name:'You', hcp:18}]);
             const [newName, setNewName] = useState("");
+            const [format, setFormat] = useState('stableford'); // 'stroke' or 'stableford'
             
             const add = () => {
                 if(localPlayers.length >= 4) return;
@@ -216,16 +217,41 @@
 
             const start = () => {
                 setPlayers(localPlayers.map(p => ({ ...p, scores: {} })));
+                setGameFormat(format);
                 setView('play');
             };
 
             return (
                 <div className="flex-1 bg-slate-50 flex flex-col h-full p-6 pt-12">
-                    <button onClick={() => setView('dashboard')} className="text-slate-400 font-bold mb-6">✕ Cancel</button>
-                    <h2 className="text-3xl font-black text-slate-800 mb-2">Setup Flight</h2>
-                    <p className="text-slate-500 mb-8">Add up to 4 players for this round.</p>
+                    <button onClick={() => setView('dashboard')} className="text-slate-400 font-bold mb-6 w-fit">✕ Cancel</button>
+                    <h2 className="text-3xl font-black text-slate-800 mb-2">Round Setup</h2>
+                    <p className="text-slate-500 mb-8">Configure your game and flight.</p>
 
+                    {/* Format Selector */}
+                    <div className="mb-8">
+                        <h3 className="font-bold text-slate-400 text-xs uppercase tracking-wider mb-3">Game Format</h3>
+                        <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-200 flex">
+                            <button 
+                                onClick={() => setFormat('stroke')}
+                                className={`flex-1 py-3 rounded-lg font-bold text-sm transition ${format === 'stroke' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                            >
+                                Stroke Play
+                            </button>
+                            <button 
+                                onClick={() => setFormat('stableford')}
+                                className={`flex-1 py-3 rounded-lg font-bold text-sm transition ${format === 'stableford' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                            >
+                                Stableford
+                            </button>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-2 text-center">
+                            {format === 'stroke' ? "Traditional scoring. Total shots count." : "Points based on Net Score. Speed play."}
+                        </p>
+                    </div>
+
+                    {/* Players */}
                     <div className="space-y-3 mb-8">
+                        <h3 className="font-bold text-slate-400 text-xs uppercase tracking-wider mb-1">Players ({localPlayers.length}/4)</h3>
                         {localPlayers.map((p, i) => (
                             <div key={p.id} className="bg-white p-4 rounded-xl shadow-sm flex items-center gap-3 border border-slate-100">
                                 <span className="w-8 h-8 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center font-bold text-sm">{i+1}</span>
@@ -250,13 +276,13 @@
                         )}
                     </div>
 
-                    <button onClick={start} className="mt-auto w-full bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg text-lg">Start Round ⛳</button>
+                    <button onClick={start} className="mt-auto w-full bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg text-lg">Start Game ⛳</button>
                 </div>
             );
         };
 
-        // 4. GAME VIEW (The Heart)
-        const GameView = ({ players, setPlayers, setView }) => {
+        // 4. GAME VIEW (Updated with Format Logic)
+        const GameView = ({ players, setPlayers, setView, gameFormat }) => {
             const [holeIdx, setHoleIdx] = useState(0);
             const [activePlayerId, setActivePlayerId] = useState(0);
             const [caddyMsg, setCaddyMsg] = useState("");
@@ -272,6 +298,11 @@
                 setPlayers(newPlayers);
             };
 
+            const getPoints = (gross) => {
+                const net = gross - (activePlayer.hcp >= hole.si ? 1 : 0); // Simplified HCP logic
+                return Math.max(0, hole.par - net + 2);
+            };
+
             const askTiger = async () => {
                 setLoading(true);
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`;
@@ -283,6 +314,11 @@
                 } catch(e) { setCaddyMsg(hole.tip); }
                 setLoading(false);
             };
+
+            // Display Logic based on Format
+            const mainDisplay = gameFormat === 'stableford' ? getPoints(score) : score;
+            const subDisplay = gameFormat === 'stableford' ? `${score} Strokes` : `${getPoints(score)} Pts`;
+            const mainLabel = gameFormat === 'stableford' ? 'POINTS' : 'STROKES';
 
             return (
                 <div className="flex-1 flex flex-col h-full bg-slate-50 relative">
@@ -332,7 +368,11 @@
                             <div className="absolute top-0 left-0 right-0 bg-slate-50 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Scoring for {activePlayer.name}</div>
                             <div className="flex items-center justify-between mt-4">
                                 <button onClick={()=>updateScore(-1)} className="w-16 h-16 rounded-full bg-slate-100 text-3xl font-bold text-slate-600 hover:bg-slate-200 transition">-</button>
-                                <div className="text-8xl font-black text-slate-800">{score}</div>
+                                <div className="text-center">
+                                    <div className="text-8xl font-black text-slate-800">{mainDisplay}</div>
+                                    <div className="text-xs font-bold text-slate-400 uppercase mt-1">{mainLabel}</div>
+                                    <div className="text-xs font-bold text-emerald-600 mt-1">{subDisplay}</div>
+                                </div>
                                 <button onClick={()=>updateScore(1)} className="w-16 h-16 rounded-full bg-emerald-600 text-white text-3xl font-bold shadow-lg hover:bg-emerald-500 transition">+</button>
                             </div>
                         </div>
@@ -358,6 +398,7 @@
             const [user, setUser] = useState(null);
             const [view, setView] = useState('auth');
             const [players, setPlayers] = useState([]);
+            const [gameFormat, setGameFormat] = useState('stableford'); // Global format state
 
             useEffect(() => onAuthStateChanged(auth, u => { setUser(u); if(u) setView('dashboard'); }), []);
 
@@ -380,14 +421,14 @@
             // Routing
             return (
                 <>
-                    {view === 'dashboard' && <Dashboard user={user} setView={setView} setPlayers={setPlayers} players={players} />}
-                    {view === 'setup' && <SetupView setView={setView} setPlayers={setPlayers} players={players} />}
-                    {view === 'play' && <GameView players={players} setPlayers={setPlayers} setView={setView} />}
+                    {view === 'dashboard' && <Dashboard user={user} setView={setView} />}
+                    {view === 'setup' && <SetupView setView={setView} setPlayers={setPlayers} setGameFormat={setGameFormat} />}
+                    {view === 'play' && <GameView players={players} setPlayers={setPlayers} setView={setView} gameFormat={gameFormat} />}
                     {view === 'wildlife' && <WildlifeView setView={setView} />}
                     
-                    {/* Bottom Nav (Only visible on dashboard/wildlife) */}
+                    {/* Bottom Nav */}
                     {(view === 'dashboard' || view === 'wildlife') && (
-                        <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-4 flex justify-around text-slate-300 pb-8">
+                        <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-4 flex justify-around text-slate-300 pb-8 safe-pb">
                             <button onClick={()=>setView('dashboard')} className={`flex flex-col items-center ${view==='dashboard'?'text-emerald-600':'hover:text-slate-500'}`}>
                                 <span className="text-2xl">🏠</span>
                                 <span className="text-[10px] font-bold mt-1">Home</span>
