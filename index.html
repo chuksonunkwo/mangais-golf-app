@@ -323,8 +323,6 @@
 
             const updateScore = (val) => {
                 const newPlayers = [...players];
-                // Note: val is +1 (increase) or -1 (decrease)
-                // score + val logic works naturally: 4 + 1 = 5 (Increase), 4 + (-1) = 3 (Decrease)
                 newPlayers[activePlayerId].scores[hole.number] = Math.max(1, score + val);
                 setPlayers(newPlayers);
             };
