@@ -6,7 +6,9 @@
     <title>Mangais Tournament Pro</title>
     
     <script src="https://unpkg.com/lucide@latest"></script>
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <script type="importmap">
@@ -25,11 +27,14 @@
         body { background-color: #f1f5f9; color: #0f172a; font-family: 'Inter', sans-serif; overflow: hidden; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .safe-pb { padding-bottom: 90px; }
+        
+        /* Pro Transitions */
         .page-enter { animation: fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        
+
+        /* Chat Bubbles */
         .chat-bubble { max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.5; margin-bottom: 12px; }
         .user-bubble { background-color: #064e3b; color: white; border-bottom-right-radius: 4px; align-self: flex-end; margin-left: auto; }
         .ai-bubble { background-color: white; border: 1px solid #e2e8f0; color: #1e293b; border-bottom-left-radius: 4px; align-self: flex-start; }
@@ -57,30 +62,28 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const googleProvider = new GoogleAuthProvider();
-        
-        // NOTE: In a real app, never expose keys. This is for demo/prototype only.
         const API_KEY = "AIzaSyBYd4jCxHZohdIHdu6fCmlU7JFvD2wAL2c"; 
 
         // --- DATA ---
         const HOLES = [
-            { number: 1, par: 5, si: 16, dist: 485, img: "https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?w=800", tip: "Wide fairway. Green accessible in 3." },
-            { number: 2, par: 4, si: 14, dist: 365, img: "https://images.unsplash.com/photo-1600607686527-6fb886090705?w=800", tip: "Avoid cross bunkers." },
-            { number: 3, par: 4, si: 8, dist: 390, img: "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=800", tip: "Play left side." },
-            { number: 4, par: 3, si: 12, dist: 145, img: "https://images.unsplash.com/photo-1592919505780-30395071d480?w=800", tip: "Watch the wind." },
-            { number: 5, par: 5, si: 2, dist: 520, img: "https://images.unsplash.com/photo-1500932334442-8761ee4810a7?w=800", tip: "Hardest front hole.", hazard: "croc" },
-            { number: 6, par: 4, si: 18, dist: 355, img: "https://images.unsplash.com/photo-1622280261622-c2e7b443272e?w=800", tip: "Birdie chance." },
-            { number: 7, par: 4, si: 10, dist: 375, img: "https://images.unsplash.com/photo-1593111774240-d529f12cf4bb?w=800", tip: "Accuracy over power." },
-            { number: 8, par: 3, si: 6, dist: 175, img: "https://images.unsplash.com/photo-1628623049103-6058d4a9463b?w=800", tip: "Over wetland. Club up.", hazard: "croc" },
-            { number: 9, par: 4, si: 4, dist: 400, img: "https://images.unsplash.com/photo-1560159752-d6d72494c502?w=800", tip: "Avoid water right." },
-            { number: 10, par: 4, si: 3, dist: 410, img: "https://images.unsplash.com/photo-1593111774639-65b09597793c?w=800", tip: "Long drive needed." },
-            { number: 11, par: 3, si: 11, dist: 160, img: "https://images.unsplash.com/photo-1591491686326-787593c2004d?w=800", tip: "Avoid bunkers." },
-            { number: 12, par: 5, si: 13, dist: 490, img: "https://images.unsplash.com/photo-1616053723334-a81d4e4c297c?w=800", tip: "Go for green in 2?" },
-            { number: 13, par: 4, si: 9, dist: 385, img: "https://images.unsplash.com/photo-1576225492986-17b2046e7276?w=800", tip: "Keep left.", hazard: "croc" },
-            { number: 14, par: 4, si: 7, dist: 395, img: "https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?w=800", tip: "Precision key." },
-            { number: 15, par: 3, si: 17, dist: 135, img: "https://images.unsplash.com/photo-1600607686527-6fb886090705?w=800", tip: "Don't go long." },
-            { number: 16, par: 4, si: 5, dist: 405, img: "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=800", tip: "Two strong shots." },
-            { number: 17, par: 5, si: 1, dist: 540, img: "https://images.unsplash.com/photo-1592919505780-30395071d480?w=800", tip: "Play safe for Par." },
-            { number: 18, par: 4, si: 15, dist: 370, img: "https://images.unsplash.com/photo-1500932334442-8761ee4810a7?w=800", tip: "Enjoy the walk.", hazard: "croc" }
+            { number: 1, par: 5, si: 16, dist: 485, tip: "Wide fairway. Green accessible in 3." },
+            { number: 2, par: 4, si: 14, dist: 365, tip: "Avoid cross bunkers." },
+            { number: 3, par: 4, si: 8, dist: 390, tip: "Play left side." },
+            { number: 4, par: 3, si: 12, dist: 145, tip: "Watch the wind." },
+            { number: 5, par: 5, si: 2, dist: 520, tip: "Hardest front hole.", hazard: "croc" },
+            { number: 6, par: 4, si: 18, dist: 355, tip: "Birdie chance." },
+            { number: 7, par: 4, si: 10, dist: 375, tip: "Accuracy over power." },
+            { number: 8, par: 3, si: 6, dist: 175, tip: "Over wetland. Club up.", hazard: "croc" },
+            { number: 9, par: 4, si: 4, dist: 400, tip: "Avoid water right." },
+            { number: 10, par: 4, si: 3, dist: 410, tip: "Long drive needed." },
+            { number: 11, par: 3, si: 11, dist: 160, tip: "Avoid bunkers." },
+            { number: 12, par: 5, si: 13, dist: 490, tip: "Go for green in 2?" },
+            { number: 13, par: 4, si: 9, dist: 385, tip: "Keep left.", hazard: "croc" },
+            { number: 14, par: 4, si: 7, dist: 395, tip: "Precision key." },
+            { number: 15, par: 3, si: 17, dist: 135, tip: "Don't go long." },
+            { number: 16, par: 4, si: 5, dist: 405, tip: "Two strong shots." },
+            { number: 17, par: 5, si: 1, dist: 540, tip: "Play safe for Par." },
+            { number: 18, par: 4, si: 15, dist: 370, tip: "Enjoy the walk.", hazard: "croc" }
         ];
 
         // --- ICONS COMPONENT ---
@@ -111,6 +114,7 @@
                 </div>
 
                 <div className="p-5 space-y-4 -mt-6">
+                    {/* Tournament Button */}
                     <button onClick={() => setView('setup')} className="w-full bg-white p-5 rounded-2xl shadow-lg border border-slate-100 flex items-center justify-between group active:scale-[0.98] transition-transform duration-200">
                         <div className="text-left">
                             <div className="flex items-center gap-2 mb-1">
@@ -139,7 +143,7 @@
             </div>
         );
 
-        // 2. SETUP
+        // 2. SETUP (Tournament/Flights)
         const SetupView = ({ setView, setPlayers, setGameFormat }) => {
             const [flights, setFlights] = useState([[{id: 1, name: 'You', hcp: 18}]]);
             const [format, setFormat] = useState('stableford'); 
@@ -150,12 +154,17 @@
                 newF[fIdx].push({ id: Date.now(), name: `Player ${newF[fIdx].length+1}`, hcp: 18 });
                 setFlights(newF);
             };
-            const addFlight = () => setFlights([...flights, [{ id: Date.now(), name: 'Player 1', hcp: 18 }]]);
+            
+            const addFlight = () => {
+                setFlights([...flights, [{ id: Date.now(), name: 'Player 1', hcp: 18 }]]);
+            };
+
             const updatePlayer = (fIdx, pIdx, k, v) => {
                 const newF = [...flights];
                 newF[fIdx][pIdx][k] = v;
                 setFlights(newF);
             };
+
             const start = () => {
                 const all = [];
                 flights.forEach((f, i) => f.forEach(p => all.push({ ...p, flight: i+1, scores: {} })));
@@ -171,7 +180,8 @@
                         <h2 className="text-lg font-bold text-slate-800">Tournament Setup</h2>
                         <div className="w-8"></div>
                     </div>
-                    <div className="mb-8 bg-white p-1 rounded-xl shadow-sm border border-slate-200 flex mb-6">
+
+                    <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-200 flex mb-6">
                         <button onClick={() => setFormat('stroke')} className={`flex-1 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition ${format === 'stroke' ? 'bg-emerald-900 text-white shadow-md' : 'text-slate-500'}`}>
                             <Icon name="hash" size={16} /> Stroke
                         </button>
@@ -179,6 +189,7 @@
                             <Icon name="calculator" size={16} /> Stableford
                         </button>
                     </div>
+
                     <div className="space-y-4">
                         {flights.map((f, i) => (
                             <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
@@ -199,20 +210,26 @@
                             </div>
                         ))}
                     </div>
+                    
                     <button onClick={addFlight} className="mt-4 w-full py-3 border-2 border-slate-200 text-slate-400 rounded-xl font-bold text-sm hover:border-emerald-500 flex items-center justify-center gap-2"><Icon name="users" size={16}/> Add Another Flight</button>
-                    <button onClick={start} className="mt-8 w-full bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-emerald-200 text-base flex items-center justify-center gap-2 active:scale-95 transition">Start Tournament <Icon name="arrow-right" size={18} /></button>
+                    
+                    <button onClick={start} className="mt-8 w-full bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-emerald-200 text-base flex items-center justify-center gap-2 active:scale-95 transition">
+                        Start Tournament <Icon name="arrow-right" size={18} />
+                    </button>
                 </div>
             );
         };
 
-        // 3. GAME VIEW (Safe + Big Strokes)
+        // 3. GAME VIEW (CRASH FIXED + +/- LOGIC)
         const GameView = ({ players, setPlayers, setView, gameFormat, holeIdx, setHoleIdx }) => {
             const [activePlayerId, setActivePlayerId] = useState(0); 
             const [isConfirmed, setIsConfirmed] = useState(false);
+            const [caddyMsg, setCaddyMsg] = useState("");
+            const [loading, setLoading] = useState(false);
             
             const hole = HOLES[holeIdx];
             
-            // --- CRASH GUARD ---
+            // --- CRASH GUARD: Prevents rendering if players array is empty ---
             if (!players || players.length === 0) return <div className="p-10 text-center text-slate-500">Loading Players...<br/><button onClick={()=>setView('setup')} className="mt-4 text-emerald-600 font-bold underline">Go to Setup</button></div>;
             
             const activePlayer = players[activePlayerId] || players[0];
@@ -223,13 +240,28 @@
             const updateScore = (val) => {
                 setIsConfirmed(false);
                 const newPlayers = [...players];
+                // +1 means ADD a stroke (Increase). -1 means REMOVE a stroke (Decrease).
                 newPlayers[activePlayerId].scores[hole.number] = Math.max(1, score + val);
                 setPlayers(newPlayers);
             };
 
             const confirmScore = () => setIsConfirmed(true);
             const getPoints = (g) => Math.max(0, hole.par - (g - (activePlayer.hcp >= hole.si ? 1 : 0)) + 2);
-            const mainDisplay = score;
+            
+            const askTiger = async () => {
+                setLoading(true);
+                // Simulation Mode for GameView (Safe)
+                setTimeout(() => {
+                    const tips = [
+                        "Aim for the center of the green.", "Wind is hurting, club up.", "Stay away from the water hazard!", "Smooth tempo, don't force it."
+                    ];
+                    setCaddyMsg(tips[Math.floor(Math.random() * tips.length)]);
+                    setLoading(false);
+                }, 1000);
+            };
+
+            // --- DISPLAY LOGIC FIX: Always show STROKES as big number ---
+            const mainDisplay = score; // Always Gross Score (Strokes)
             const subDisplay = gameFormat === 'stableford' ? `${getPoints(score)} PTS` : `Net ${score - (activePlayer.hcp >= hole.si ? 1 : 0)}`;
 
             return (
@@ -243,7 +275,11 @@
                         <div className="flex justify-between items-end">
                             <div>
                                 <h2 className="text-4xl font-black mb-1">{hole.par} <span className="text-lg font-medium opacity-60">PAR</span></h2>
-                                <div className="flex gap-3 text-xs font-bold text-emerald-300"><span>SI {hole.si}</span><span>•</span><span>{hole.dist}m</span></div>
+                                <div className="flex gap-3 text-xs font-bold text-emerald-300">
+                                    <span>SI {hole.si}</span>
+                                    <span>•</span>
+                                    <span>{hole.dist}m</span>
+                                </div>
                             </div>
                             <div className="flex gap-2">
                                 <button onClick={()=>setHoleIdx(Math.max(0, holeIdx-1))} disabled={holeIdx===0} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 disabled:opacity-30"><Icon name="chevron-left" /></button>
@@ -268,17 +304,27 @@
                             </div>
 
                             <div className="flex items-center justify-between mb-8">
+                                {/* MINUS BUTTON - DECREASES STROKES */}
                                 <button onClick={()=>updateScore(-1)} className="w-14 h-14 rounded-full bg-slate-50 text-slate-600 flex items-center justify-center border border-slate-200 active:scale-95 transition"><Icon name="minus" /></button>
+                                
                                 <div className="text-center">
+                                    {/* BIG NUMBER IS STROKES */}
                                     <span className="text-7xl font-black text-slate-900 block leading-none">{mainDisplay}</span>
                                     <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full mt-2 inline-block">{subDisplay}</span>
                                 </div>
+                                
+                                {/* PLUS BUTTON - INCREASES STROKES */}
                                 <button onClick={()=>updateScore(1)} className="w-14 h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-200 active:scale-95 transition"><Icon name="plus" /></button>
                             </div>
 
                             <button onClick={confirmScore} className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${isConfirmed ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-900 text-white shadow-lg hover:bg-slate-800'}`}>
                                 {isConfirmed ? <><Icon name="check" size={18}/> Score Saved</> : "Confirm Score"}
                             </button>
+                        </div>
+
+                        <div className="w-full max-w-xs space-y-3">
+                            {caddyMsg && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl text-sm text-emerald-800 font-medium animate-in">💡 {caddyMsg}</div>}
+                            <button onClick={askTiger} disabled={loading} className="w-full bg-white border border-slate-200 py-4 rounded-2xl font-bold shadow-sm text-slate-700 flex items-center justify-center gap-2 hover:bg-slate-50 transition"><span>🐯</span> {loading ? "Thinking..." : "Tiger Strategy"}</button>
                         </div>
                     </div>
                 </div>
