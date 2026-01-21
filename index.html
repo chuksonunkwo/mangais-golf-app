@@ -216,14 +216,14 @@
             );
         };
 
-        // 3. GAME VIEW (CRASH FIXED)
+        // 3. GAME VIEW (Strokes = Big Number)
         const GameView = ({ players, setPlayers, setView, gameFormat, holeIdx, setHoleIdx }) => {
             const [activePlayerId, setActivePlayerId] = useState(0); 
             const [isConfirmed, setIsConfirmed] = useState(false);
             
             const hole = HOLES[holeIdx];
             
-            // --- CRASH GUARD: Prevents rendering if players array is empty ---
+            // --- CRASH GUARD ---
             if (!players || players.length === 0) return <div className="p-10 text-center">Loading Players...</div>;
             const activePlayer = players[activePlayerId] || players[0];
             const score = activePlayer.scores[hole.number] || hole.par;
@@ -233,14 +233,17 @@
             const updateScore = (val) => {
                 setIsConfirmed(false);
                 const newPlayers = [...players];
+                // +1 means ADD a stroke (Increase). -1 means REMOVE a stroke (Decrease).
                 newPlayers[activePlayerId].scores[hole.number] = Math.max(1, score + val);
                 setPlayers(newPlayers);
             };
 
             const confirmScore = () => setIsConfirmed(true);
             const getPoints = (g) => Math.max(0, hole.par - (g - (activePlayer.hcp >= hole.si ? 1 : 0)) + 2);
-            const mainDisplay = gameFormat === 'stableford' ? getPoints(score) : score;
-            const subDisplay = gameFormat === 'stableford' ? `${score} Strokes` : `${getPoints(score)} Pts`;
+            
+            // --- DISPLAY LOGIC FIX: Always show STROKES as big number ---
+            const mainDisplay = score; // Always Gross Score (Strokes)
+            const subDisplay = gameFormat === 'stableford' ? `${getPoints(score)} PTS` : `Net ${score - (activePlayer.hcp >= hole.si ? 1 : 0)}`;
 
             return (
                 <div className="flex-1 flex flex-col h-full bg-slate-50 relative safe-pb page-enter">
@@ -282,11 +285,16 @@
                             </div>
 
                             <div className="flex items-center justify-between mb-8">
+                                {/* MINUS BUTTON - DECREASES STROKES */}
                                 <button onClick={()=>updateScore(-1)} className="w-14 h-14 rounded-full bg-slate-50 text-slate-600 flex items-center justify-center border border-slate-200 active:scale-95 transition"><Icon name="minus" /></button>
+                                
                                 <div className="text-center">
+                                    {/* BIG NUMBER IS STROKES */}
                                     <span className="text-7xl font-black text-slate-900 block leading-none">{mainDisplay}</span>
                                     <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full mt-2 inline-block">{subDisplay}</span>
                                 </div>
+                                
+                                {/* PLUS BUTTON - INCREASES STROKES */}
                                 <button onClick={()=>updateScore(1)} className="w-14 h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-200 active:scale-95 transition"><Icon name="plus" /></button>
                             </div>
 
