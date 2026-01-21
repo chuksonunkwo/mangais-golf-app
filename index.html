@@ -216,15 +216,15 @@
             );
         };
 
-        // 3. GAME VIEW
+        // 3. GAME VIEW (CRASH FIXED)
         const GameView = ({ players, setPlayers, setView, gameFormat, holeIdx, setHoleIdx }) => {
             const [activePlayerId, setActivePlayerId] = useState(0); 
             const [isConfirmed, setIsConfirmed] = useState(false);
             
             const hole = HOLES[holeIdx];
             
-            // --- CRASH GUARD: Ensure players exist ---
-            if (!players || players.length === 0) return <div>Loading Players...</div>;
+            // --- CRASH GUARD: Prevents rendering if players array is empty ---
+            if (!players || players.length === 0) return <div className="p-10 text-center">Loading Players...</div>;
             const activePlayer = players[activePlayerId] || players[0];
             const score = activePlayer.scores[hole.number] || hole.par;
 
