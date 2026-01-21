@@ -1,3 +1,4 @@
+%%writefile index.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -27,14 +28,10 @@
         body { background-color: #f1f5f9; color: #0f172a; font-family: 'Inter', sans-serif; overflow: hidden; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .safe-pb { padding-bottom: 90px; }
-        
-        /* Pro Transitions */
         .page-enter { animation: fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* Chat Bubbles */
         .chat-bubble { max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.5; margin-bottom: 12px; word-wrap: break-word; }
         .user-bubble { background-color: #064e3b; color: white; border-bottom-right-radius: 4px; align-self: flex-end; margin-left: auto; }
         .ai-bubble { background-color: white; border: 1px solid #e2e8f0; color: #1e293b; border-bottom-left-radius: 4px; align-self: flex-start; }
@@ -120,8 +117,8 @@
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                                 <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide">Tournament Mode</span>
                             </div>
-                            <span className="block text-xl font-bold text-slate-800">Mangais Championship</span>
-                            <span className="text-xs text-slate-400">Multi-Flight • Live Scoring</span>
+                            <span className="block text-xl font-bold text-slate-800">Start New Game</span>
+                            <span className="text-xs text-slate-400">Setup Holes, Format & Players</span>
                         </div>
                         <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center border border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                             <Icon name="trophy" fill="currentColor" size={20} />
@@ -142,54 +139,90 @@
             </div>
         );
 
-        // 2. SETUP
-        const SetupView = ({ setView, setPlayers, setGameFormat }) => {
+        // 2. WIZARD SETUP VIEW (New Flow)
+        const SetupView = ({ setView, setPlayers, setGameFormat, setConfig }) => {
+            const [step, setStep] = useState(1); // 1: Holes, 2: Format, 3: Mode, 4: Players
+            const [holeSelection, setHoleSelection] = useState('18');
+            const [mainFormat, setMainFormat] = useState('stroke');
+            const [subFormat, setSubFormat] = useState('individual');
             const [flights, setFlights] = useState([[{id: 1, name: 'You', hcp: 18}]]);
-            const [format, setFormat] = useState('stableford'); 
 
+            // --- NAVIGATION HELPERS ---
+            const nextStep = () => setStep(step + 1);
+            const prevStep = () => setStep(step - 1);
+
+            // --- PLAYER MANAGEMENT ---
             const addPlayer = (fIdx) => {
                 if (flights[fIdx].length >= 4) return;
                 const newF = [...flights];
                 newF[fIdx].push({ id: Date.now(), name: `Player ${newF[fIdx].length+1}`, hcp: 18 });
                 setFlights(newF);
             };
-            
-            const addFlight = () => {
-                setFlights([...flights, [{ id: Date.now(), name: 'Player 1', hcp: 18 }]]);
-            };
-
+            const addFlight = () => setFlights([...flights, [{ id: Date.now(), name: 'Player 1', hcp: 18 }]]);
             const updatePlayer = (fIdx, pIdx, k, v) => {
                 const newF = [...flights];
                 newF[fIdx][pIdx][k] = v;
                 setFlights(newF);
             };
 
-            const start = () => {
+            const startGame = () => {
                 const all = [];
                 flights.forEach((f, i) => f.forEach(p => all.push({ ...p, flight: i+1, scores: {} })));
                 setPlayers(all);
-                setGameFormat(format);
+                setGameFormat(mainFormat); // Store for scoring logic
+                setConfig({ holeSelection, subFormat }); // Store for display
                 setView('play');
             };
 
-            return (
-                <div className="flex-1 bg-slate-50 flex flex-col h-full p-5 pt-12 overflow-y-auto page-enter">
-                    <div className="flex justify-between items-center mb-6">
-                        <button onClick={() => setView('dashboard')} className="p-2 -ml-2 text-slate-400 hover:text-slate-600"><Icon name="x" /></button>
-                        <h2 className="text-lg font-bold text-slate-800">Tournament Setup</h2>
-                        <div className="w-8"></div>
-                    </div>
-
-                    <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-200 flex mb-6">
-                        <button onClick={() => setFormat('stroke')} className={`flex-1 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition ${format === 'stroke' ? 'bg-emerald-900 text-white shadow-md' : 'text-slate-500'}`}>
-                            <Icon name="hash" size={16} /> Stroke
+            // --- RENDER STEPS ---
+            const renderStep1 = () => (
+                <div className="space-y-3 animate-slide-up">
+                    <h3 className="text-emerald-800 font-bold mb-4 uppercase tracking-widest text-xs">Step 1: Select Holes</h3>
+                    {['18 Holes', 'Front 9', 'Back 9'].map(opt => (
+                        <button key={opt} onClick={() => { setHoleSelection(opt); nextStep(); }} className="w-full bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center hover:border-emerald-500 hover:bg-emerald-50 transition">
+                            <span className="font-bold text-slate-700">{opt}</span>
+                            <Icon name="arrow-right" size={18} className="text-slate-300" />
                         </button>
-                        <button onClick={() => setFormat('stableford')} className={`flex-1 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition ${format === 'stableford' ? 'bg-emerald-900 text-white shadow-md' : 'text-slate-500'}`}>
-                            <Icon name="calculator" size={16} /> Stableford
-                        </button>
-                    </div>
+                    ))}
+                </div>
+            );
 
-                    <div className="space-y-4">
+            const renderStep2 = () => (
+                <div className="space-y-3 animate-slide-up">
+                    <h3 className="text-emerald-800 font-bold mb-4 uppercase tracking-widest text-xs">Step 2: Game Format</h3>
+                    <button onClick={() => { setMainFormat('stroke'); nextStep(); }} className="w-full bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col items-start gap-1 hover:border-emerald-500 hover:bg-emerald-50 transition">
+                        <span className="font-bold text-slate-800 text-lg">Stroke Play</span>
+                        <span className="text-xs text-slate-400">Total strokes counts</span>
+                    </button>
+                    <button onClick={() => { setMainFormat('stableford'); nextStep(); }} className="w-full bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col items-start gap-1 hover:border-emerald-500 hover:bg-emerald-50 transition">
+                        <span className="font-bold text-slate-800 text-lg">Stableford</span>
+                        <span className="text-xs text-slate-400">Points based on handicap</span>
+                    </button>
+                </div>
+            );
+
+            const renderStep3 = () => {
+                const options = mainFormat === 'stroke' 
+                    ? ['Individual', 'Skins', 'Match Play', 'Better Ball'] 
+                    : ['Individual', 'Skins', 'Better Ball'];
+
+                return (
+                    <div className="space-y-3 animate-slide-up">
+                        <h3 className="text-emerald-800 font-bold mb-4 uppercase tracking-widest text-xs">Step 3: {mainFormat === 'stroke' ? 'Stroke' : 'Stableford'} Mode</h3>
+                        {options.map(opt => (
+                            <button key={opt} onClick={() => { setSubFormat(opt); nextStep(); }} className="w-full bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center hover:border-emerald-500 hover:bg-emerald-50 transition">
+                                <span className="font-bold text-slate-700">{opt}</span>
+                                <Icon name="check-circle" size={18} className="text-slate-300" />
+                            </button>
+                        ))}
+                    </div>
+                );
+            };
+
+            const renderStep4 = () => (
+                <div className="animate-slide-up">
+                    <h3 className="text-emerald-800 font-bold mb-4 uppercase tracking-widest text-xs">Step 4: Players</h3>
+                    <div className="space-y-6 mb-6">
                         {flights.map((f, i) => (
                             <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
                                 <div className="flex justify-between items-center mb-3 border-b border-slate-100 pb-2">
@@ -209,15 +242,39 @@
                             </div>
                         ))}
                     </div>
-                    
-                    <button onClick={addFlight} className="mt-4 w-full py-3 border-2 border-slate-200 text-slate-400 rounded-xl font-bold text-sm hover:border-emerald-500 flex items-center justify-center gap-2"><Icon name="users" size={16}/> Add Another Flight</button>
-                    <button onClick={start} className="mt-8 w-full bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-emerald-200 text-base flex items-center justify-center gap-2 active:scale-95 transition">Start Tournament <Icon name="arrow-right" size={18} /></button>
+                    <button onClick={addFlight} className="mt-4 w-full py-3 border-2 border-slate-200 text-slate-400 rounded-xl font-bold text-sm hover:border-emerald-500 flex items-center justify-center gap-2 mb-4"><Icon name="users" size={16}/> Add Another Flight</button>
+                    <button onClick={startGame} className="w-full bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-emerald-200 text-base flex items-center justify-center gap-2 active:scale-95 transition">
+                        Start Game 🚀
+                    </button>
+                </div>
+            );
+
+            return (
+                <div className="flex-1 bg-slate-50 flex flex-col h-full p-5 pt-12 overflow-y-auto page-enter">
+                    <div className="flex justify-between items-center mb-6">
+                        {step > 1 ? (
+                            <button onClick={prevStep} className="p-2 -ml-2 text-slate-400 hover:text-slate-600"><Icon name="arrow-left" /></button>
+                        ) : (
+                            <button onClick={() => setView('dashboard')} className="p-2 -ml-2 text-slate-400 hover:text-slate-600"><Icon name="x" /></button>
+                        )}
+                        <div className="flex gap-1">
+                            {[1,2,3,4].map(s => (
+                                <div key={s} className={`h-1.5 rounded-full transition-all duration-300 ${s <= step ? 'w-6 bg-emerald-500' : 'w-2 bg-slate-200'}`}></div>
+                            ))}
+                        </div>
+                        <div className="w-8"></div>
+                    </div>
+
+                    {step === 1 && renderStep1()}
+                    {step === 2 && renderStep2()}
+                    {step === 3 && renderStep3()}
+                    {step === 4 && renderStep4()}
                 </div>
             );
         };
 
-        // 3. GAME VIEW (CRASH-PROOF)
-        const GameView = ({ players, setPlayers, setView, gameFormat, holeIdx, setHoleIdx }) => {
+        // 3. GAME VIEW (Safe + Config Display)
+        const GameView = ({ players, setPlayers, setView, gameFormat, holeIdx, setHoleIdx, config }) => {
             const [activePlayerId, setActivePlayerId] = useState(0); 
             const [isConfirmed, setIsConfirmed] = useState(false);
             const [caddyMsg, setCaddyMsg] = useState("");
@@ -225,21 +282,11 @@
             
             const hole = HOLES[holeIdx];
             
-            // --- CRASH GUARD: Prevents rendering if players array is empty ---
-            if (!players || players.length === 0) {
-                return (
-                    <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 p-6 text-center safe-pb page-enter">
-                        <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-4 text-3xl">⚠️</div>
-                        <h2 className="text-xl font-bold text-slate-800 mb-2">No Players Found</h2>
-                        <p className="text-sm text-slate-500 mb-6">Please set up your tournament first.</p>
-                        <button onClick={()=>setView('setup')} className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg">Go to Setup</button>
-                    </div>
-                );
-            }
-            // -----------------------------------------------------------
-
+            // --- CRASH GUARD ---
+            if (!players || players.length === 0) return <div className="p-10 text-center text-slate-500">Loading Players...<br/><button onClick={()=>setView('setup')} className="mt-4 text-emerald-600 font-bold underline">Go to Setup</button></div>;
+            
             const activePlayer = players[activePlayerId] || players[0];
-            const score = (activePlayer.scores && activePlayer.scores[hole.number]) ? activePlayer.scores[hole.number] : hole.par;
+            const score = activePlayer.scores[hole.number] || hole.par;
 
             useEffect(() => setIsConfirmed(false), [activePlayerId, holeIdx]);
 
@@ -262,7 +309,6 @@
                 setLoading(true);
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`;
                 const prompt = `Short golf advice for Mangais Hole ${hole.number} (Par ${hole.par}, ${hole.dist}m). Pro Tip: ${hole.tip}. Hazards: ${hole.hazard||'None'}.`;
-                
                 try {
                     const res = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
                     const data = await res.json();
@@ -272,15 +318,18 @@
                 setLoading(false);
             };
 
-            const mainDisplay = score;
+            const mainDisplay = score; 
             const subDisplay = gameFormat === 'stableford' ? `${getPoints(score)} PTS` : `Net ${score - (activePlayer.hcp >= hole.si ? 1 : 0)}`;
 
             return (
                 <div className="flex-1 flex flex-col h-full bg-slate-50 relative safe-pb page-enter">
                     <div className="bg-emerald-900 pt-10 pb-6 px-4 rounded-b-3xl shadow-lg z-10 text-white">
-                        <div className="flex justify-between items-center mb-4">
+                        <div className="flex justify-between items-center mb-2">
                             <button onClick={()=>setView('dashboard')}><Icon name="home" className="text-emerald-200" /></button>
-                            <span className="font-bold text-emerald-100 text-xs uppercase tracking-widest">Hole {hole.number}</span>
+                            <div className="flex flex-col items-center">
+                                <span className="font-bold text-emerald-100 text-xs uppercase tracking-widest">Hole {hole.number}</span>
+                                <span className="text-[10px] text-emerald-400 capitalize">{config.subFormat}</span>
+                            </div>
                             <button onClick={()=>setView('leaderboard')}><Icon name="list" className="text-emerald-200" /></button>
                         </div>
                         <div className="flex justify-between items-end">
@@ -481,11 +530,6 @@
 
             useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-            const getSystemPrompt = () => {
-                const currentHole = HOLES[holeIdx];
-                return `You are Mangais Caddy at Mangais Golf Resort Angola. Hole ${currentHole.number}, Par ${currentHole.par}. Pro Tip: ${currentHole.tip}. Hazards: ${currentHole.hazard||'None'}.`;
-            };
-
             const ask = async (query) => {
                 const userText = query || input;
                 if(!userText.trim()) return;
@@ -494,13 +538,10 @@
                 setLoading(true);
 
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`;
-                
+                const prompt = `You are Mangais Caddy. Warn about crocodiles on holes 5, 8, 13, 18. Keep it brief.`;
+
                 try {
-                    const res = await fetch(url, { 
-                        method: 'POST', 
-                        headers: {'Content-Type': 'application/json'}, 
-                        body: JSON.stringify({ contents: [{ parts: [{ text: getSystemPrompt() + "\n\nUser: " + userText }] }] }) 
-                    });
+                    const res = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt + "\n\nUser: " + userText }] }] }) });
                     const data = await res.json();
                     if (data.candidates) {
                         setStatus("online");
@@ -556,6 +597,7 @@
             const [view, setView] = useState('auth');
             const [players, setPlayers] = useState([]);
             const [gameFormat, setGameFormat] = useState('stableford');
+            const [config, setConfig] = useState({ holeSelection: '18', subFormat: 'Individual' });
             const [holeIdx, setHoleIdx] = useState(0);
 
             useEffect(() => {
@@ -584,8 +626,8 @@
             return (
                 <>
                     {view === 'dashboard' && <Dashboard user={user} setView={setView} />}
-                    {view === 'setup' && <SetupView setView={setView} setPlayers={setPlayers} setGameFormat={setGameFormat} />}
-                    {view === 'play' && <GameView players={players} setPlayers={setPlayers} setView={setView} gameFormat={gameFormat} holeIdx={holeIdx} setHoleIdx={setHoleIdx} />}
+                    {view === 'setup' && <SetupView setView={setView} setPlayers={setPlayers} setGameFormat={setGameFormat} setConfig={setConfig} />}
+                    {view === 'play' && <GameView players={players} setPlayers={setPlayers} setView={setView} gameFormat={gameFormat} holeIdx={holeIdx} setHoleIdx={setHoleIdx} config={config} />}
                     {view === 'leaderboard' && <LeaderboardView players={players} setView={setView} gameFormat={gameFormat} />}
                     {view === 'wildlife' && <WildlifeView setView={setView} holeIdx={holeIdx} />}
                     {view === 'ai-caddy' && <CaddyView setView={setView} holeIdx={holeIdx} />}
