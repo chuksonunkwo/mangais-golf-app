@@ -27,10 +27,14 @@
         body { background-color: #f1f5f9; color: #0f172a; font-family: 'Inter', sans-serif; overflow: hidden; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .safe-pb { padding-bottom: 90px; }
+        
+        /* Pro Transitions */
         .page-enter { animation: fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Chat Bubbles */
         .chat-bubble { max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.5; margin-bottom: 12px; }
         .user-bubble { background-color: #064e3b; color: white; border-bottom-right-radius: 4px; align-self: flex-end; margin-left: auto; }
         .ai-bubble { background-color: white; border: 1px solid #e2e8f0; color: #1e293b; border-bottom-left-radius: 4px; align-self: flex-start; }
@@ -110,7 +114,6 @@
                 </div>
 
                 <div className="p-5 space-y-4 -mt-6">
-                    {/* Tournament Button */}
                     <button onClick={() => setView('setup')} className="w-full bg-white p-5 rounded-2xl shadow-lg border border-slate-100 flex items-center justify-between group active:scale-[0.98] transition-transform duration-200">
                         <div className="text-left">
                             <div className="flex items-center gap-2 mb-1">
@@ -139,7 +142,7 @@
             </div>
         );
 
-        // 2. SETUP (Tournament/Flights)
+        // 2. SETUP
         const SetupView = ({ setView, setPlayers, setGameFormat }) => {
             const [flights, setFlights] = useState([[{id: 1, name: 'You', hcp: 18}]]);
             const [format, setFormat] = useState('stableford'); 
@@ -216,15 +219,16 @@
             );
         };
 
-        // 3. GAME VIEW (Strokes = Big Number)
+        // 3. GAME VIEW (CRASH FIXED + +/- LOGIC)
         const GameView = ({ players, setPlayers, setView, gameFormat, holeIdx, setHoleIdx }) => {
             const [activePlayerId, setActivePlayerId] = useState(0); 
             const [isConfirmed, setIsConfirmed] = useState(false);
             
             const hole = HOLES[holeIdx];
             
-            // --- CRASH GUARD ---
-            if (!players || players.length === 0) return <div className="p-10 text-center">Loading Players...</div>;
+            // --- CRASH GUARD: Prevents rendering if players array is empty ---
+            if (!players || players.length === 0) return <div className="p-10 text-center text-slate-500">Loading Players...<br/><button onClick={()=>setView('setup')} className="mt-4 text-emerald-600 font-bold underline">Go to Setup</button></div>;
+            
             const activePlayer = players[activePlayerId] || players[0];
             const score = activePlayer.scores[hole.number] || hole.par;
 
