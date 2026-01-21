@@ -1,3 +1,4 @@
+%%writefile index.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -27,11 +28,15 @@
         body { background-color: #f1f5f9; color: #0f172a; font-family: 'Inter', sans-serif; overflow: hidden; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .safe-pb { padding-bottom: 90px; }
+        
+        /* Pro Transitions */
         .page-enter { animation: fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .chat-bubble { max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.5; margin-bottom: 12px; }
+
+        /* Chat Bubbles */
+        .chat-bubble { max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.5; margin-bottom: 12px; word-wrap: break-word; }
         .user-bubble { background-color: #064e3b; color: white; border-bottom-right-radius: 4px; align-self: flex-end; margin-left: auto; }
         .ai-bubble { background-color: white; border: 1px solid #e2e8f0; color: #1e293b; border-bottom-left-radius: 4px; align-self: flex-start; }
     </style>
@@ -149,12 +154,17 @@
                 newF[fIdx].push({ id: Date.now(), name: `Player ${newF[fIdx].length+1}`, hcp: 18 });
                 setFlights(newF);
             };
-            const addFlight = () => setFlights([...flights, [{ id: Date.now(), name: 'Player 1', hcp: 18 }]]);
+            
+            const addFlight = () => {
+                setFlights([...flights, [{ id: Date.now(), name: 'Player 1', hcp: 18 }]]);
+            };
+
             const updatePlayer = (fIdx, pIdx, k, v) => {
                 const newF = [...flights];
                 newF[fIdx][pIdx][k] = v;
                 setFlights(newF);
             };
+
             const start = () => {
                 const all = [];
                 flights.forEach((f, i) => f.forEach(p => all.push({ ...p, flight: i+1, scores: {} })));
@@ -207,7 +217,7 @@
             );
         };
 
-        // 3. GAME VIEW (CRASH-PROOF + CORRECT +-)
+        // 3. GAME VIEW (CRASH-PROOF)
         const GameView = ({ players, setPlayers, setView, gameFormat, holeIdx, setHoleIdx }) => {
             const [activePlayerId, setActivePlayerId] = useState(0); 
             const [isConfirmed, setIsConfirmed] = useState(false);
@@ -216,10 +226,10 @@
             
             const hole = HOLES[holeIdx];
             
-            // --- 🛡️ CRASH GUARD START ---
+            // --- CRASH GUARD: Prevents rendering if players array is empty ---
             if (!players || players.length === 0) {
                 return (
-                    <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
+                    <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 p-6 text-center safe-pb page-enter">
                         <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-4 text-3xl">⚠️</div>
                         <h2 className="text-xl font-bold text-slate-800 mb-2">No Players Found</h2>
                         <p className="text-sm text-slate-500 mb-6">Please set up your tournament first.</p>
@@ -227,28 +237,20 @@
                     </div>
                 );
             }
-            // --- 🛡️ CRASH GUARD END ---
+            // -----------------------------------------------------------
 
             const activePlayer = players[activePlayerId] || players[0];
-            
-            // Safe Access to scores
-            const score = (activePlayer.scores && activePlayer.scores[hole.number]) 
-                          ? activePlayer.scores[hole.number] 
-                          : hole.par;
+            const score = (activePlayer.scores && activePlayer.scores[hole.number]) ? activePlayer.scores[hole.number] : hole.par;
 
             useEffect(() => setIsConfirmed(false), [activePlayerId, holeIdx]);
 
             const updateScore = (val) => {
                 setIsConfirmed(false);
-                // IMMUTABLE UPDATE PATTERN (Prevents bugs)
                 const newPlayers = players.map((p, idx) => {
                     if (idx !== activePlayerId) return p;
                     return {
                         ...p,
-                        scores: {
-                            ...p.scores,
-                            [hole.number]: Math.max(1, score + val)
-                        }
+                        scores: { ...p.scores, [hole.number]: Math.max(1, score + val) }
                     };
                 });
                 setPlayers(newPlayers);
@@ -271,7 +273,7 @@
                 setLoading(false);
             };
 
-            const mainDisplay = score; // STROKES
+            const mainDisplay = score;
             const subDisplay = gameFormat === 'stableford' ? `${getPoints(score)} PTS` : `Net ${score - (activePlayer.hcp >= hole.si ? 1 : 0)}`;
 
             return (
