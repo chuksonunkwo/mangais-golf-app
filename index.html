@@ -6,9 +6,7 @@
     <title>Mangais Tournament Pro</title>
     
     <script src="https://unpkg.com/lucide@latest"></script>
-    
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <script type="importmap">
@@ -31,6 +29,7 @@
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
         .chat-bubble { max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.5; margin-bottom: 12px; }
         .user-bubble { background-color: #064e3b; color: white; border-bottom-right-radius: 4px; align-self: flex-end; margin-left: auto; }
         .ai-bubble { background-color: white; border: 1px solid #e2e8f0; color: #1e293b; border-bottom-left-radius: 4px; align-self: flex-start; }
@@ -58,6 +57,8 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const googleProvider = new GoogleAuthProvider();
+        
+        // NOTE: In a real app, never expose keys. This is for demo/prototype only.
         const API_KEY = "AIzaSyBYd4jCxHZohdIHdu6fCmlU7JFvD2wAL2c"; 
 
         // --- DATA ---
@@ -110,7 +111,6 @@
                 </div>
 
                 <div className="p-5 space-y-4 -mt-6">
-                    {/* Tournament Button */}
                     <button onClick={() => setView('setup')} className="w-full bg-white p-5 rounded-2xl shadow-lg border border-slate-100 flex items-center justify-between group active:scale-[0.98] transition-transform duration-200">
                         <div className="text-left">
                             <div className="flex items-center gap-2 mb-1">
@@ -139,7 +139,7 @@
             </div>
         );
 
-        // 2. SETUP (Tournament/Flights)
+        // 2. SETUP
         const SetupView = ({ setView, setPlayers, setGameFormat }) => {
             const [flights, setFlights] = useState([[{id: 1, name: 'You', hcp: 18}]]);
             const [format, setFormat] = useState('stableford'); 
@@ -150,17 +150,12 @@
                 newF[fIdx].push({ id: Date.now(), name: `Player ${newF[fIdx].length+1}`, hcp: 18 });
                 setFlights(newF);
             };
-            
-            const addFlight = () => {
-                setFlights([...flights, [{ id: Date.now(), name: 'Player 1', hcp: 18 }]]);
-            };
-
+            const addFlight = () => setFlights([...flights, [{ id: Date.now(), name: 'Player 1', hcp: 18 }]]);
             const updatePlayer = (fIdx, pIdx, k, v) => {
                 const newF = [...flights];
                 newF[fIdx][pIdx][k] = v;
                 setFlights(newF);
             };
-
             const start = () => {
                 const all = [];
                 flights.forEach((f, i) => f.forEach(p => all.push({ ...p, flight: i+1, scores: {} })));
@@ -176,8 +171,7 @@
                         <h2 className="text-lg font-bold text-slate-800">Tournament Setup</h2>
                         <div className="w-8"></div>
                     </div>
-
-                    <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-200 flex mb-6">
+                    <div className="mb-8 bg-white p-1 rounded-xl shadow-sm border border-slate-200 flex mb-6">
                         <button onClick={() => setFormat('stroke')} className={`flex-1 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition ${format === 'stroke' ? 'bg-emerald-900 text-white shadow-md' : 'text-slate-500'}`}>
                             <Icon name="hash" size={16} /> Stroke
                         </button>
@@ -185,7 +179,6 @@
                             <Icon name="calculator" size={16} /> Stableford
                         </button>
                     </div>
-
                     <div className="space-y-4">
                         {flights.map((f, i) => (
                             <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
@@ -206,26 +199,20 @@
                             </div>
                         ))}
                     </div>
-                    
                     <button onClick={addFlight} className="mt-4 w-full py-3 border-2 border-slate-200 text-slate-400 rounded-xl font-bold text-sm hover:border-emerald-500 flex items-center justify-center gap-2"><Icon name="users" size={16}/> Add Another Flight</button>
-                    
-                    <button onClick={start} className="mt-8 w-full bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-emerald-200 text-base flex items-center justify-center gap-2 active:scale-95 transition">
-                        Start Tournament <Icon name="arrow-right" size={18} />
-                    </button>
+                    <button onClick={start} className="mt-8 w-full bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-emerald-200 text-base flex items-center justify-center gap-2 active:scale-95 transition">Start Tournament <Icon name="arrow-right" size={18} /></button>
                 </div>
             );
         };
 
-        // 3. GAME VIEW (UPDATED: Big Number = Strokes)
+        // 3. GAME VIEW (Safe + Big Strokes)
         const GameView = ({ players, setPlayers, setView, gameFormat, holeIdx, setHoleIdx }) => {
             const [activePlayerId, setActivePlayerId] = useState(0); 
             const [isConfirmed, setIsConfirmed] = useState(false);
-            const [caddyMsg, setCaddyMsg] = useState("");
-            const [loading, setLoading] = useState(false);
             
             const hole = HOLES[holeIdx];
             
-            // CRASH GUARD
+            // --- CRASH GUARD ---
             if (!players || players.length === 0) return <div className="p-10 text-center text-slate-500">Loading Players...<br/><button onClick={()=>setView('setup')} className="mt-4 text-emerald-600 font-bold underline">Go to Setup</button></div>;
             
             const activePlayer = players[activePlayerId] || players[0];
@@ -236,28 +223,13 @@
             const updateScore = (val) => {
                 setIsConfirmed(false);
                 const newPlayers = [...players];
-                // UPDATE: +1 adds a stroke (Increase), -1 removes a stroke (Decrease)
                 newPlayers[activePlayerId].scores[hole.number] = Math.max(1, score + val);
                 setPlayers(newPlayers);
             };
 
             const confirmScore = () => setIsConfirmed(true);
             const getPoints = (g) => Math.max(0, hole.par - (g - (activePlayer.hcp >= hole.si ? 1 : 0)) + 2);
-            
-            const askTiger = async () => {
-                setLoading(true);
-                // Simulation Mode for GameView (Safe)
-                setTimeout(() => {
-                    const tips = [
-                        "Aim for the center of the green.", "Wind is hurting, club up.", "Stay away from the water hazard!", "Smooth tempo, don't force it."
-                    ];
-                    setCaddyMsg(tips[Math.floor(Math.random() * tips.length)]);
-                    setLoading(false);
-                }, 1000);
-            };
-
-            // DISPLAY LOGIC: Big Number is ALWAYS Strokes now
-            const mainDisplay = score; 
+            const mainDisplay = score;
             const subDisplay = gameFormat === 'stableford' ? `${getPoints(score)} PTS` : `Net ${score - (activePlayer.hcp >= hole.si ? 1 : 0)}`;
 
             return (
@@ -271,11 +243,7 @@
                         <div className="flex justify-between items-end">
                             <div>
                                 <h2 className="text-4xl font-black mb-1">{hole.par} <span className="text-lg font-medium opacity-60">PAR</span></h2>
-                                <div className="flex gap-3 text-xs font-bold text-emerald-300">
-                                    <span>SI {hole.si}</span>
-                                    <span>•</span>
-                                    <span>{hole.dist}m</span>
-                                </div>
+                                <div className="flex gap-3 text-xs font-bold text-emerald-300"><span>SI {hole.si}</span><span>•</span><span>{hole.dist}m</span></div>
                             </div>
                             <div className="flex gap-2">
                                 <button onClick={()=>setHoleIdx(Math.max(0, holeIdx-1))} disabled={holeIdx===0} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 disabled:opacity-30"><Icon name="chevron-left" /></button>
@@ -300,24 +268,17 @@
                             </div>
 
                             <div className="flex items-center justify-between mb-8">
-                                {/* Minus Button -> Decrease Score */}
                                 <button onClick={()=>updateScore(-1)} className="w-14 h-14 rounded-full bg-slate-50 text-slate-600 flex items-center justify-center border border-slate-200 active:scale-95 transition"><Icon name="minus" /></button>
                                 <div className="text-center">
                                     <span className="text-7xl font-black text-slate-900 block leading-none">{mainDisplay}</span>
                                     <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full mt-2 inline-block">{subDisplay}</span>
                                 </div>
-                                {/* Plus Button -> Increase Score */}
                                 <button onClick={()=>updateScore(1)} className="w-14 h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-200 active:scale-95 transition"><Icon name="plus" /></button>
                             </div>
 
                             <button onClick={confirmScore} className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${isConfirmed ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-900 text-white shadow-lg hover:bg-slate-800'}`}>
                                 {isConfirmed ? <><Icon name="check" size={18}/> Score Saved</> : "Confirm Score"}
                             </button>
-                        </div>
-
-                        <div className="w-full max-w-xs space-y-3">
-                            {caddyMsg && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl text-sm text-emerald-800 font-medium animate-in">💡 {caddyMsg}</div>}
-                            <button onClick={askTiger} disabled={loading} className="w-full bg-white border border-slate-200 py-4 rounded-2xl font-bold shadow-sm text-slate-700 flex items-center justify-center gap-2 hover:bg-slate-50 transition"><span>🐯</span> {loading ? "Thinking..." : "Tiger Strategy"}</button>
                         </div>
                     </div>
                 </div>
@@ -414,3 +375,217 @@
                             <h2 className="font-bold">Nature Watch</h2>
                             <div className="w-6"></div>
                         </div>
+                    </div>
+                    
+                    <div className="p-5 flex-1 overflow-y-auto">
+                        <div className="grid grid-cols-2 gap-3 mb-6">
+                            <button onClick={()=>setModal('croc')} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 hover:border-amber-400 transition">
+                                <span className="text-3xl">🐊</span><span className="text-xs font-bold text-slate-700">Log Croc</span>
+                            </button>
+                            <button onClick={()=>setModal('bird')} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 hover:border-sky-400 transition">
+                                <span className="text-3xl">🦅</span><span className="text-xs font-bold text-slate-700">Log Bird</span>
+                            </button>
+                        </div>
+
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Recent Sightings</h3>
+                        <div className="space-y-3">
+                            {sightings.map(s => (
+                                <div key={s.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${s.alert ? 'bg-amber-100' : 'bg-sky-100'}`}>{s.alert?'🐊':'🦅'}</div>
+                                    <div>
+                                        <div className="flex items-center gap-2"><span className="font-bold text-sm text-slate-800">{s.animal}</span> <span className="text-[10px] text-slate-400">{s.time}</span></div>
+                                        <p className="text-xs text-slate-500">Hole {s.hole} • {s.loc || 'General area'}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {modal && (
+                        <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-6 backdrop-blur-sm animate-in fade-in">
+                            <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-slide-up">
+                                <h3 className="font-bold text-lg mb-1 text-slate-800">Spotting a {modal==='croc'?'Crocodile':'Bird'}</h3>
+                                <p className="text-xs text-slate-500 mb-4">You are on Hole {holeIdx+1}</p>
+                                <input className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm mb-4 outline-none focus:border-emerald-500" placeholder="Where exactly? (e.g. River bank)" value={loc} onChange={e=>setLoc(e.target.value)} autoFocus />
+                                <button className="w-full py-3 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 text-sm font-bold mb-4 flex items-center justify-center gap-2"><Icon name="camera" size={16}/> Add Photo</button>
+                                <div className="flex gap-3">
+                                    <button onClick={()=>setModal(null)} className="flex-1 py-3 text-sm font-bold text-slate-500">Cancel</button>
+                                    <button onClick={submit} className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg">Submit Log</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // 6. CADDY (Smart + Context Aware)
+        const CaddyView = ({ setView, holeIdx }) => {
+            const [messages, setMessages] = useState([{ role: 'model', text: "Hello! I'm your Mangais AI Caddy. Ask me about wind, strategy, or rules." }]);
+            const [input, setInput] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [status, setStatus] = useState("online"); // online | offline
+            const scrollRef = useRef(null);
+
+            useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+            // Construct context-aware system prompt
+            const getSystemPrompt = () => {
+                const currentHole = HOLES[holeIdx];
+                return `
+                  You are "Mangais Caddy", an elite caddy at Mangais Golf Resort Angola.
+                  
+                  **CURRENT CONTEXT**
+                  - Player is on Hole ${currentHole.number}
+                  - Par: ${currentHole.par}, Distance: ${currentHole.dist}m
+                  - Pro Tip: ${currentHole.tip}
+                  - Hazards: ${currentHole.hazard ? 'CROCODILE DANGER!' : 'Standard'}
+                  
+                  **INSTRUCTIONS**
+                  - Keep answers short (under 40 words).
+                  - If crocodiles are mentioned or relevant to this hole, WARN THE PLAYER.
+                  - Mention wind off Kwanza River if asked about strategy.
+                `;
+            };
+
+            const ask = async (query) => {
+                const userText = query || input;
+                if(!userText.trim()) return;
+                
+                setMessages(prev => [...prev, { role: 'user', text: userText }]);
+                setInput('');
+                setLoading(true);
+
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`;
+                
+                try {
+                    const res = await fetch(url, { 
+                        method: 'POST', 
+                        headers: {'Content-Type': 'application/json'}, 
+                        body: JSON.stringify({ contents: [{ parts: [{ text: getSystemPrompt() + "\n\nUser: " + userText }] }] }) 
+                    });
+                    
+                    const data = await res.json();
+                    
+                    if (data.candidates && data.candidates.length > 0) {
+                        setStatus("online");
+                        const reply = data.candidates[0].content.parts[0].text;
+                        setMessages(prev => [...prev, { role: 'model', text: reply }]);
+                    } else {
+                        throw new Error("API Failure");
+                    }
+                } catch(e) {
+                    setStatus("offline");
+                    // FALLBACK: Simulates intelligence based on keyword matching logic
+                    let fallbackText = "I'm having trouble checking the wind.";
+                    const lowerQ = userText.toLowerCase();
+                    
+                    if(lowerQ.includes('wind')) fallbackText = "Wind is swirling off the Kwanza River. Club up!";
+                    else if(lowerQ.includes('strategy') || lowerQ.includes('tip')) fallbackText = `For Hole ${holeIdx+1}, ${HOLES[holeIdx].tip}`;
+                    else if(lowerQ.includes('crocodile') || lowerQ.includes('animal')) fallbackText = "Stay away from the water edges. Crocs are active today.";
+                    else fallbackText = "Play it safe. Aim for the center of the green.";
+                    
+                    setMessages(prev => [...prev, { role: 'model', text: "📡 (Offline Mode): " + fallbackText }]);
+                }
+                setLoading(false);
+            };
+
+            return (
+                <div className="flex-1 bg-slate-50 flex flex-col h-full safe-pb page-enter">
+                    <div className="bg-emerald-900 p-4 pt-10 shadow-md text-white flex justify-between items-center sticky top-0 z-10">
+                        <button onClick={() => setView('dashboard')}><Icon name="arrow-left" /></button>
+                        <div className="flex flex-col items-center">
+                            <h2 className="font-bold">AI Caddy</h2>
+                            <div className="flex items-center gap-1">
+                                <div className={`w-2 h-2 rounded-full ${status==='online'?'bg-green-400':'bg-red-400'}`}></div>
+                                <span className="text-[10px] opacity-80 uppercase tracking-wide">{status === 'online' ? 'Connected' : 'Offline Mode'}</span>
+                            </div>
+                        </div>
+                        <div className="w-6"></div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 flex flex-col">
+                        {messages.map((m, i) => <div key={i} className={`chat-bubble ${m.role === 'user' ? 'user-bubble' : 'ai-bubble'}`}>{m.text}</div>)}
+                        {loading && <div className="text-xs text-slate-400 ml-4 animate-pulse">Thinking...</div>}
+                        <div ref={scrollRef}></div>
+                    </div>
+                    <div className="p-4 bg-white border-t border-slate-200">
+                        <div className="flex gap-2">
+                            <input value={input} onChange={e=>setInput(e.target.value)} placeholder="Ask about strategy..." className="flex-1 bg-slate-100 rounded-full px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500" onKeyDown={e=>e.key==='Enter' && ask()} />
+                            <button onClick={()=>ask()} className="bg-emerald-600 text-white p-3 rounded-full shadow-md"><Icon name="send" size={18} /></button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // 7. NAV
+        const NavBar = ({ view, setView }) => (
+            <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 pb-8 pt-2 px-6 flex justify-between items-center z-20">
+                <button onClick={()=>setView('dashboard')} className={`flex flex-col items-center gap-1 ${view==='dashboard'?'text-emerald-700':'text-slate-400'}`}>
+                    <Icon name="home" size={24} strokeWidth={view==='dashboard'?2.5:2} />
+                    <span className="text-[10px] font-bold">Home</span>
+                </button>
+                
+                <button onClick={()=>setView('play')} className="mb-8 w-16 h-16 bg-emerald-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-emerald-200 border-4 border-slate-50 active:scale-95 transition-transform">
+                    <Icon name="flag" size={28} fill="currentColor" />
+                </button>
+
+                <button onClick={()=>setView('wildlife')} className={`flex flex-col items-center gap-1 ${view==='wildlife'?'text-emerald-700':'text-slate-400'}`}>
+                    <Icon name="trees" size={24} strokeWidth={view==='wildlife'?2.5:2} />
+                    <span className="text-[10px] font-bold">Nature</span>
+                </button>
+            </div>
+        );
+
+        // --- APP SHELL ---
+        function App() {
+            const [user, setUser] = useState(null);
+            const [view, setView] = useState('auth');
+            const [players, setPlayers] = useState([]);
+            const [gameFormat, setGameFormat] = useState('stableford');
+            const [holeIdx, setHoleIdx] = useState(0);
+
+            useEffect(() => {
+                onAuthStateChanged(auth, u => { setUser(u); if(u) setView('dashboard'); });
+                lucide.createIcons();
+            }, []);
+
+            useEffect(() => { lucide.createIcons(); }, [view]); 
+
+            const login = async () => { try { await signInWithPopup(auth, googleProvider); } catch(e) { alert("Use Guest Mode in Colab"); } };
+            const guest = async () => await signInAnonymously(auth);
+
+            if (!user) return (
+                <div className="h-full flex flex-col items-center justify-center p-8 bg-[url('https://images.unsplash.com/photo-1593111774240-d529f12cf4bb?w=800')] bg-cover bg-center">
+                    <div className="absolute inset-0 bg-emerald-900/90 backdrop-blur-sm"></div>
+                    <div className="relative z-10 w-full flex flex-col items-center text-white">
+                        <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center text-emerald-900 mb-6 shadow-2xl">
+                            <Icon name="flag" size={40} fill="currentColor" />
+                        </div>
+                        <h1 className="text-3xl font-black mb-2 tracking-tight">MANGAIS</h1>
+                        <p className="text-emerald-200 text-xs font-bold tracking-[0.3em] uppercase mb-12">GameBook Edition</p>
+                        <button onClick={login} className="w-full bg-white text-slate-900 py-4 rounded-xl font-bold shadow-xl mb-3 flex items-center justify-center gap-3"><Icon name="user" size={18}/> Sign In</button>
+                        <button onClick={guest} className="w-full bg-emerald-800/50 text-emerald-100 py-4 rounded-xl font-bold border border-emerald-500/30">Guest Access</button>
+                    </div>
+                </div>
+            );
+
+            return (
+                <>
+                    {view === 'dashboard' && <Dashboard user={user} setView={setView} />}
+                    {view === 'setup' && <SetupView setView={setView} setPlayers={setPlayers} setGameFormat={setGameFormat} />}
+                    {view === 'play' && <GameView players={players} setPlayers={setPlayers} setView={setView} gameFormat={gameFormat} holeIdx={holeIdx} setHoleIdx={setHoleIdx} />}
+                    {view === 'leaderboard' && <LeaderboardView players={players} setView={setView} gameFormat={gameFormat} />}
+                    {view === 'wildlife' && <WildlifeView setView={setView} holeIdx={holeIdx} />}
+                    {view === 'ai-caddy' && <CaddyView setView={setView} holeIdx={holeIdx} />}
+                    
+                    {(view === 'dashboard' || view === 'play' || view === 'wildlife') && <NavBar view={view} setView={setView} />}
+                </>
+            );
+        }
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
