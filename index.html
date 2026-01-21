@@ -1,4 +1,3 @@
-%%writefile index.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -31,8 +30,9 @@
         body { background-color: #f8fafc; color: #0f172a; font-family: 'Inter', sans-serif; overflow: hidden; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .safe-pb { padding-bottom: 90px; }
-        .animate-slide-down { animation: slideDown 0.2s ease-out forwards; }
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
         .chat-bubble { max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.5; margin-bottom: 12px; }
         .user-bubble { background-color: #059669; color: white; border-bottom-right-radius: 4px; align-self: flex-end; margin-left: auto; }
         .ai-bubble { background-color: white; border: 1px solid #e2e8f0; color: #1e293b; border-bottom-left-radius: 4px; align-self: flex-start; }
@@ -86,78 +86,60 @@
 
         // --- COMPONENTS ---
 
-        const Dashboard = ({ user, setView }) => {
-            return (
-                <div className="flex-1 overflow-y-auto bg-slate-50 safe-pb">
-                    <div className="relative h-64 rounded-b-[40px] overflow-hidden shadow-xl">
-                        <img src="https://images.unsplash.com/photo-1593111774240-d529f12cf4bb?w=800" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/90 to-transparent"></div>
-                        <div className="absolute bottom-6 left-6 text-white">
-                            <h1 className="text-3xl font-bold">{user.displayName || "Golfer"}</h1>
-                            <div className="flex items-center gap-2 mt-2">
-                                <span className="bg-emerald-500/30 backdrop-blur px-3 py-1 rounded-full text-xs font-bold border border-emerald-400/30">HCP 18</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="p-6 -mt-10 relative z-10 space-y-5">
-                        <button onClick={() => setView('setup')} className="w-full bg-emerald-900 text-white p-6 rounded-3xl shadow-xl flex items-center justify-between group active:scale-95 transition">
-                            <div className="text-left">
-                                <span className="block text-emerald-400 font-bold text-xs uppercase tracking-wider mb-1">New Tournament</span>
-                                <span className="block text-2xl font-bold">Start Game 🚀</span>
-                            </div>
-                            <div className="w-12 h-12 bg-emerald-700 rounded-full flex items-center justify-center text-2xl group-hover:bg-emerald-500 transition">🏌️</div>
-                        </button>
-                        <div className="grid grid-cols-2 gap-4">
-                            <button onClick={() => setView('wildlife')} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 active:scale-95 transition">
-                                <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-xl mb-3">🐊</div>
-                                <div className="text-left font-bold text-slate-700">Wildlife Log</div>
-                            </button>
-                            <button onClick={() => setView('ai-caddy')} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 active:scale-95 transition">
-                                <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-xl mb-3">🤖</div>
-                                <div className="text-left font-bold text-slate-700">Ask AI Caddy</div>
-                            </button>
+        const Dashboard = ({ user, setView }) => (
+            <div className="flex-1 overflow-y-auto bg-slate-50 safe-pb">
+                <div className="relative h-64 rounded-b-[40px] overflow-hidden shadow-xl">
+                    <img src="https://images.unsplash.com/photo-1593111774240-d529f12cf4bb?w=800" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/90 to-transparent"></div>
+                    <div className="absolute bottom-6 left-6 text-white">
+                        <h1 className="text-3xl font-bold">{user.displayName || "Golfer"}</h1>
+                        <div className="flex items-center gap-2 mt-2">
+                            <span className="bg-emerald-500/30 backdrop-blur px-3 py-1 rounded-full text-xs font-bold border border-emerald-400/30">HCP 18</span>
                         </div>
                     </div>
                 </div>
-            );
-        };
+                <div className="p-6 -mt-10 relative z-10 space-y-5">
+                    <button onClick={() => setView('setup')} className="w-full bg-emerald-900 text-white p-6 rounded-3xl shadow-xl flex items-center justify-between group active:scale-95 transition">
+                        <div className="text-left">
+                            <span className="block text-emerald-400 font-bold text-xs uppercase tracking-wider mb-1">New Tournament</span>
+                            <span className="block text-2xl font-bold">Start Game 🚀</span>
+                        </div>
+                        <div className="w-12 h-12 bg-emerald-700 rounded-full flex items-center justify-center text-2xl group-hover:bg-emerald-500 transition">🏌️</div>
+                    </button>
+                    <div className="grid grid-cols-2 gap-4">
+                        <button onClick={() => setView('wildlife')} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 active:scale-95 transition">
+                            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-xl mb-3">🐊</div>
+                            <div className="text-left font-bold text-slate-700">Wildlife Log</div>
+                        </button>
+                        <button onClick={() => setView('ai-caddy')} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 active:scale-95 transition">
+                            <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-xl mb-3">🤖</div>
+                            <div className="text-left font-bold text-slate-700">Ask AI Caddy</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
 
         const SetupView = ({ setView, setPlayers, setGameFormat }) => {
-            const [flights, setFlights] = useState([
-                [{id: 1, name: 'You', hcp: 18}]
-            ]);
+            const [flights, setFlights] = useState([[{id: 1, name: 'You', hcp: 18}]]);
             const [format, setFormat] = useState('stableford'); 
 
-            const addPlayer = (flightIdx) => {
-                if (flights[flightIdx].length >= 4) return;
-                const newFlights = [...flights];
-                newFlights[flightIdx].push({ id: Date.now(), name: `Player ${newFlights[flightIdx].length+1}`, hcp: 18 });
-                setFlights(newFlights);
+            const addPlayer = (fIdx) => {
+                if (flights[fIdx].length >= 4) return;
+                const newF = [...flights];
+                newF[fIdx].push({ id: Date.now(), name: `Player ${newF[fIdx].length+1}`, hcp: 18 });
+                setFlights(newF);
             };
-
-            const addFlight = () => {
-                setFlights([...flights, [{ id: Date.now(), name: 'Player 1', hcp: 18 }]]);
+            const addFlight = () => setFlights([...flights, [{ id: Date.now(), name: 'Player 1', hcp: 18 }]]);
+            const updatePlayer = (fIdx, pIdx, k, v) => {
+                const newF = [...flights];
+                newF[fIdx][pIdx][k] = v;
+                setFlights(newF);
             };
-
-            const updatePlayer = (flightIdx, playerIdx, field, val) => {
-                const newFlights = [...flights];
-                newFlights[flightIdx][playerIdx][field] = val;
-                setFlights(newFlights);
-            };
-
-            const removeFlight = (idx) => {
-                if(flights.length <= 1) return;
-                setFlights(flights.filter((_, i) => i !== idx));
-            }
-
             const start = () => {
-                const allPlayers = [];
-                flights.forEach((flight, fIdx) => {
-                    flight.forEach(p => {
-                        allPlayers.push({ ...p, flight: fIdx + 1, scores: {} });
-                    });
-                });
-                setPlayers(allPlayers);
+                const all = [];
+                flights.forEach((f, i) => f.forEach(p => all.push({ ...p, flight: i+1, scores: {} })));
+                setPlayers(all);
                 setGameFormat(format);
                 setView('play');
             };
@@ -168,47 +150,27 @@
                         <button onClick={() => setView('dashboard')} className="text-slate-400 font-bold">✕ Cancel</button>
                         <h2 className="text-2xl font-black text-slate-800">Setup</h2>
                     </div>
-
-                    <div className="mb-8">
-                        <h3 className="font-bold text-slate-400 text-xs uppercase tracking-wider mb-3">Format</h3>
-                        <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-200 flex">
-                            <button onClick={() => setFormat('stroke')} className={`flex-1 py-3 rounded-lg font-bold text-sm transition ${format === 'stroke' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>Stroke Play</button>
-                            <button onClick={() => setFormat('stableford')} className={`flex-1 py-3 rounded-lg font-bold text-sm transition ${format === 'stableford' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>Stableford</button>
-                        </div>
+                    <div className="mb-8 bg-white p-1 rounded-xl shadow-sm border border-slate-200 flex">
+                        <button onClick={() => setFormat('stroke')} className={`flex-1 py-3 rounded-lg font-bold text-sm ${format === 'stroke' ? 'bg-emerald-600 text-white' : 'text-slate-500'}`}>Stroke Play</button>
+                        <button onClick={() => setFormat('stableford')} className={`flex-1 py-3 rounded-lg font-bold text-sm ${format === 'stableford' ? 'bg-emerald-600 text-white' : 'text-slate-500'}`}>Stableford</button>
                     </div>
-
                     <div className="space-y-6">
-                        {flights.map((flight, fIdx) => (
-                            <div key={fIdx} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-                                <div className="flex justify-between items-center mb-3">
-                                    <h3 className="font-bold text-emerald-800 text-sm uppercase tracking-wider">Flight {fIdx + 1}</h3>
-                                    {fIdx > 0 && <button onClick={()=>removeFlight(fIdx)} className="text-xs text-red-400 font-bold">Remove</button>}
-                                </div>
+                        {flights.map((f, i) => (
+                            <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                                <h3 className="font-bold text-emerald-800 text-sm uppercase tracking-wider mb-3">Flight {i + 1}</h3>
                                 <div className="space-y-3">
-                                    {flight.map((p, pIdx) => (
+                                    {f.map((p, j) => (
                                         <div key={p.id} className="flex gap-2">
-                                            <input 
-                                                className="flex-1 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 font-bold text-slate-700 outline-none focus:border-emerald-500"
-                                                value={p.name}
-                                                onChange={(e) => updatePlayer(fIdx, pIdx, 'name', e.target.value)}
-                                            />
-                                            <input 
-                                                type="number"
-                                                className="w-16 bg-slate-50 border border-slate-100 rounded-lg px-2 py-2 font-bold text-slate-700 text-center outline-none focus:border-emerald-500"
-                                                value={p.hcp}
-                                                onChange={(e) => updatePlayer(fIdx, pIdx, 'hcp', Number(e.target.value))}
-                                            />
+                                            <input className="flex-1 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 font-bold text-slate-700 outline-none" value={p.name} onChange={(e) => updatePlayer(i, j, 'name', e.target.value)} />
+                                            <input type="number" className="w-16 bg-slate-50 border border-slate-100 rounded-lg px-2 py-2 font-bold text-slate-700 text-center outline-none" value={p.hcp} onChange={(e) => updatePlayer(i, j, 'hcp', Number(e.target.value))} />
                                         </div>
                                     ))}
-                                    {flight.length < 4 && (
-                                        <button onClick={() => addPlayer(fIdx)} className="w-full py-2 border border-dashed border-emerald-300 text-emerald-600 rounded-lg font-bold text-sm hover:bg-emerald-50 transition">+ Add Player</button>
-                                    )}
+                                    {f.length < 4 && <button onClick={() => addPlayer(i)} className="w-full py-2 border border-dashed border-emerald-300 text-emerald-600 rounded-lg font-bold text-sm hover:bg-emerald-50">+ Add Player</button>}
                                 </div>
                             </div>
                         ))}
                     </div>
-
-                    <button onClick={addFlight} className="mt-4 w-full py-4 border-2 border-slate-200 text-slate-400 rounded-xl font-bold text-sm hover:border-emerald-500 hover:text-emerald-600 transition">Add Flight ✈️</button>
+                    <button onClick={addFlight} className="mt-4 w-full py-4 border-2 border-slate-200 text-slate-400 rounded-xl font-bold text-sm hover:border-emerald-500">Add Flight ✈️</button>
                     <div className="h-8"></div>
                     <button onClick={start} className="w-full bg-emerald-900 text-white py-4 rounded-xl font-bold shadow-lg text-lg sticky bottom-6">Start Tournament ⛳</button>
                 </div>
@@ -217,27 +179,17 @@
 
         const LeaderboardView = ({ players, setView, gameFormat }) => {
             const [expandedId, setExpandedId] = useState(null);
-
-            const getPoints = (gross, hcp, si, par) => {
-                const net = gross - (hcp >= si ? 1 : 0);
-                return Math.max(0, par - net + 2);
-            };
-            
+            const getPoints = (g, hcp, si, par) => Math.max(0, par - (g - (hcp >= si ? 1 : 0)) + 2);
             const calcStats = (p) => {
                 let gross = 0, pts = 0;
                 HOLES.forEach(h => {
                     const s = p.scores[h.number];
-                    if(s) {
-                        gross += s;
-                        pts += getPoints(s, p.hcp, h.si, h.par);
-                    }
+                    if(s) { gross += s; pts += getPoints(s, p.hcp, h.si, h.par); }
                 });
                 return { gross, pts };
             }
-
             const sortedPlayers = [...players].sort((a, b) => {
-                const sA = calcStats(a);
-                const sB = calcStats(b);
+                const sA = calcStats(a), sB = calcStats(b);
                 return gameFormat === 'stableford' ? sB.pts - sA.pts : sA.gross - sB.gross;
             });
 
@@ -249,55 +201,30 @@
                             <h2 className="font-bold text-xl">Leaderboard</h2>
                             <div className="w-8"></div>
                         </div>
-                        <div className="flex justify-center gap-4 text-xs font-bold text-emerald-300 uppercase tracking-widest">
-                            <span>{gameFormat === 'stableford' ? 'Stableford' : 'Stroke Play'}</span>
-                            <span>•</span>
-                            <span>{players.length} Players</span>
-                        </div>
                     </div>
-
                     <div className="flex-1 overflow-y-auto p-4 space-y-3">
                         {sortedPlayers.map((p, i) => {
                             const stats = calcStats(p);
                             const isExpanded = expandedId === p.id;
-                            
                             return (
-                                <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden transition-all">
-                                    <div 
-                                        className="p-4 flex items-center justify-between cursor-pointer active:bg-slate-50"
-                                        onClick={() => setExpandedId(isExpanded ? null : p.id)}
-                                    >
+                                <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                                    <div className="p-4 flex items-center justify-between cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : p.id)}>
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-8 h-8 flex items-center justify-center rounded-full font-bold text-sm ${i===0 ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100 text-slate-500'}`}>{i+1}</div>
-                                            <div>
-                                                <h4 className="font-bold text-slate-800">{p.name}</h4>
-                                                <p className="text-xs text-slate-400">Flight {p.flight} • HCP {p.hcp}</p>
-                                            </div>
+                                            <div className="w-8 h-8 flex items-center justify-center rounded-full font-bold text-sm bg-slate-100 text-slate-500">{i+1}</div>
+                                            <div><h4 className="font-bold text-slate-800">{p.name}</h4><p className="text-xs text-slate-400">Flight {p.flight}</p></div>
                                         </div>
-                                        <div className="text-right flex items-center gap-3">
-                                            <div>
-                                                <span className="block text-2xl font-black text-emerald-700">{gameFormat==='stableford' ? stats.pts : stats.gross}</span>
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase">{gameFormat==='stableford' ? 'PTS' : 'STR'}</span>
-                                            </div>
-                                            <div className={`text-slate-300 transform transition ${isExpanded ? 'rotate-180' : ''}`}>▼</div>
+                                        <div className="text-right">
+                                            <span className="block text-2xl font-black text-emerald-700">{gameFormat==='stableford' ? stats.pts : stats.gross}</span>
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase">{gameFormat==='stableford' ? 'PTS' : 'STR'}</span>
                                         </div>
                                     </div>
-                                    
                                     {isExpanded && (
                                         <div className="bg-slate-50 border-t border-slate-100 p-3 animate-slide-down">
-                                            <div className="grid grid-cols-9 gap-1 text-center mb-2">
-                                                {HOLES.slice(0,9).map(h => (
-                                                    <div key={h.number} className="bg-white rounded p-1 border border-slate-100">
-                                                        <div className="text-[8px] font-bold text-slate-400">{h.number}</div>
-                                                        <div className={`font-bold text-sm ${p.scores[h.number] ? 'text-slate-800' : 'text-slate-200'}`}>{p.scores[h.number] || '-'}</div>
-                                                    </div>
-                                                ))}
-                                            </div>
                                             <div className="grid grid-cols-9 gap-1 text-center">
-                                                {HOLES.slice(9,18).map(h => (
+                                                {HOLES.map(h => (
                                                     <div key={h.number} className="bg-white rounded p-1 border border-slate-100">
                                                         <div className="text-[8px] font-bold text-slate-400">{h.number}</div>
-                                                        <div className={`font-bold text-sm ${p.scores[h.number] ? 'text-slate-800' : 'text-slate-200'}`}>{p.scores[h.number] || '-'}</div>
+                                                        <div className="font-bold text-sm text-slate-800">{p.scores[h.number] || '-'}</div>
                                                     </div>
                                                 ))}
                                             </div>
@@ -311,53 +238,115 @@
             );
         };
 
+        // --- WILDLIFE VIEW (FIXED WITH MODAL) ---
+        const WildlifeView = ({ setView, holeIdx }) => {
+            const [sightings, setSightings] = useState([{ id: 1, animal: 'Crocodile', hole: 13, loc: 'Water', time: '20m ago', alert: true }]);
+            const [modalOpen, setModalOpen] = useState(false);
+            const [type, setType] = useState('');
+            const [location, setLocation] = useState('');
+
+            const openLog = (t) => { setType(t); setModalOpen(true); };
+            
+            const submitLog = () => {
+                if(!location) return alert("Please enter a location");
+                const newSighting = { 
+                    id: Date.now(), 
+                    animal: type, 
+                    hole: holeIdx ? holeIdx + 1 : '?', 
+                    loc: location, 
+                    time: 'Just now', 
+                    alert: type==='Crocodile' 
+                };
+                setSightings([newSighting, ...sightings]);
+                setModalOpen(false); 
+                setLocation('');
+            };
+
+            return (
+                <div className="flex-1 bg-slate-50 flex flex-col h-full safe-pb">
+                    <div className="bg-emerald-900 p-6 pt-12 pb-8 rounded-b-[40px] shadow-lg text-white">
+                        <div className="flex justify-between items-center mb-4">
+                            <button onClick={() => setView('dashboard')} className="p-2 bg-white/20 rounded-full">⬅️</button>
+                            <h2 className="font-bold text-lg">Nature Watch</h2><div className="w-8"></div>
+                        </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                            <button onClick={()=>openLog('Crocodile')} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 hover:bg-amber-50">
+                                <span className="text-4xl">🐊</span><span className="font-bold text-amber-900">Log Croc</span>
+                            </button>
+                            <button onClick={()=>openLog('Bird')} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 hover:bg-sky-50">
+                                <span className="text-4xl">🦅</span><span className="font-bold text-sky-900">Log Bird</span>
+                            </button>
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-slate-400 text-xs uppercase tracking-wider mb-3">Recent Feed</h3>
+                            <div className="space-y-3">
+                                {sightings.map(s => (
+                                    <div key={s.id} className="bg-white p-4 rounded-xl shadow-sm flex items-center gap-4 border border-slate-100 animate-slide-up">
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${s.alert ? 'bg-amber-100' : 'bg-slate-100'}`}>{s.alert?'🐊':'🦅'}</div>
+                                        <div className="flex-1">
+                                            <div className="flex justify-between"><span className="font-bold text-slate-800">{s.animal}</span><span className="text-xs text-slate-400">{s.time}</span></div>
+                                            <p className="text-xs text-slate-500">Hole {s.hole} • {s.loc}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    {modalOpen && (
+                        <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center p-6 backdrop-blur-sm animate-in fade-in">
+                            <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-slide-up">
+                                <h3 className="font-bold text-xl mb-2 text-slate-800">Log {type}</h3>
+                                <p className="text-sm text-slate-500 mb-4">You are currently on Hole {holeIdx ? holeIdx+1 : 1}.</p>
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Where exactly?</label>
+                                <input className="w-full bg-slate-100 p-3 rounded-xl mb-4 outline-none border border-slate-200 focus:border-emerald-500" placeholder="e.g. River bank, Tree..." value={location} onChange={e=>setLocation(e.target.value)} />
+                                <button className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-400 font-bold mb-4 hover:bg-slate-50" onClick={()=>alert("Camera Simulation: Photo Captured!")}>📸 Take Photo</button>
+                                <div className="flex gap-2">
+                                    <button onClick={()=>setModalOpen(false)} className="flex-1 py-3 font-bold text-slate-500">Cancel</button>
+                                    <button onClick={submitLog} className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold shadow-lg">Submit</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
         const CaddyView = ({ setView }) => {
-            const [messages, setMessages] = useState([
-                { role: 'model', text: "Hello! I'm your Mangais AI Caddy. Need advice on a hole or a rule check?" }
-            ]);
+            const [messages, setMessages] = useState([{ role: 'model', text: "Hello! I'm your Mangais AI Caddy. Ask me about wind, strategy, or rules." }]);
             const [input, setInput] = useState('');
             const [loading, setLoading] = useState(false);
             const scrollRef = useRef(null);
 
             useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-            // FALLBACK "SIMULATION MODE" RESPONSES (Witty Tiger Style)
-            const fallbackResponses = [
-                "Wind is swirling off the Kwanza. Club up and swing easy.",
-                "Stay left! That water hazard on the right is hungry today.",
-                "Safe play is center green. Don't be a hero on this one.",
-                "Crocodile alert! 🐊 Keep your ball dry and stay away from the banks.",
-                "It's a risk/reward hole. If you're feeling lucky, go for it!",
-                "Check your stance. Aim small, miss small.",
-                "Index 1 hole coming up. Play for Par, accept Bogey."
-            ];
-
             const ask = async (query) => {
                 const userText = query || input;
                 if(!userText.trim()) return;
-                
                 setMessages(prev => [...prev, { role: 'user', text: userText }]);
                 setInput('');
                 setLoading(true);
 
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`;
-                const systemPrompt = `You are "Mangais Caddy", an elite golf caddy at Mangais Resort Angola. Warn about crocodiles on holes 5, 8, 13, 18. Keep answers under 50 words.`;
+                const prompt = `You are Mangais Caddy. Warn about crocodiles on holes 5, 8, 13, 18. Keep it brief.`;
 
                 try {
-                    const res = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt + "\n\nUser: " + userText }] }] }) });
+                    const res = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt + "\n\nUser: " + userText }] }] }) });
                     const data = await res.json();
-                    
-                    if (data.candidates && data.candidates.length > 0) {
-                        const reply = data.candidates[0].content.parts[0].text;
-                        setMessages(prev => [...prev, { role: 'model', text: reply }]);
-                    } else {
-                        throw new Error("Invalid response");
-                    }
+                    if (data.candidates) {
+                        setMessages(prev => [...prev, { role: 'model', text: data.candidates[0].content.parts[0].text }]);
+                    } else throw new Error("No data");
                 } catch(e) {
-                    console.log("AI Offline, using simulation.");
-                    // FALLBACK: Pick a random witty response so it never "crashes"
-                    const randomReply = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-                    setMessages(prev => [...prev, { role: 'model', text: "📡 (Radio Caddy): " + randomReply }]);
+                    // ROBUST FALLBACK - SIMULATION MODE
+                    const fallbacks = [
+                        "Wind is swirling off the Kwanza River today. I'd recommend clubbing up.",
+                        "Aim for the center of the green. Pin hunting is dangerous with these hazards.",
+                        "Watch out for the water hazard on the right. Smart play is a layup.",
+                        "That looks like a tricky lie. Take your medicine and get it back in play.",
+                        "Rule Check: If you hit into the water, it's a one stroke penalty. Drop within two club lengths."
+                    ];
+                    setMessages(prev => [...prev, { role: 'model', text: "📡 (Simulation): " + fallbacks[Math.floor(Math.random()*fallbacks.length)] }]);
                 }
                 setLoading(false);
             };
@@ -384,59 +373,26 @@
             );
         };
 
-        // 4. GAME VIEW (Updated with CONFIRM BUTTON)
-        const GameView = ({ players, setPlayers, setView, gameFormat }) => {
-            const [holeIdx, setHoleIdx] = useState(0);
+        const GameView = ({ players, setPlayers, setView, gameFormat, holeIdx, setHoleIdx }) => {
             const [activePlayerId, setActivePlayerId] = useState(0); 
-            const [isEditing, setIsEditing] = useState(false);
-            const [caddyMsg, setCaddyMsg] = useState("");
-            const [loading, setLoading] = useState(false);
-            const [isConfirmed, setIsConfirmed] = useState(false); // New state for confirmation
+            const [isConfirmed, setIsConfirmed] = useState(false);
             
             const hole = HOLES[holeIdx];
             const activePlayer = players[activePlayerId];
             const score = activePlayer.scores[hole.number] || hole.par;
 
-            useEffect(() => {
-                setIsConfirmed(false); // Reset confirmation when changing player or hole
-            }, [activePlayerId, holeIdx]);
+            useEffect(() => setIsConfirmed(false), [activePlayerId, holeIdx]);
 
             const updateScore = (val) => {
-                setIsConfirmed(false); // Un-confirm if they change the score
+                setIsConfirmed(false);
                 const newPlayers = [...players];
                 newPlayers[activePlayerId].scores[hole.number] = Math.max(1, score + val);
                 setPlayers(newPlayers);
             };
 
-            const updateActivePlayer = (field, val) => {
-                const newPlayers = [...players];
-                newPlayers[activePlayerId][field] = val;
-                setPlayers(newPlayers);
-            };
+            const confirmScore = () => setIsConfirmed(true);
 
-            const confirmScore = () => {
-                setIsConfirmed(true);
-                // Optional: Auto-advance to next player after short delay
-                // setTimeout(() => { if(activePlayerId < players.length - 1) setActivePlayerId(activePlayerId + 1); }, 1000);
-            };
-
-            const getPoints = (gross) => {
-                const net = gross - (activePlayer.hcp >= hole.si ? 1 : 0); 
-                return Math.max(0, hole.par - net + 2);
-            };
-
-            const askTiger = async () => {
-                setLoading(true);
-                // Simple hardcoded fallback for game view context
-                setTimeout(() => {
-                    const tips = [
-                        "Aim for the center.", "Watch out for the wind.", "Club up here.", "Stay away from the water!"
-                    ];
-                    setCaddyMsg(tips[Math.floor(Math.random() * tips.length)]);
-                    setLoading(false);
-                }, 1000);
-            };
-
+            const getPoints = (g) => Math.max(0, hole.par - (g - (activePlayer.hcp >= hole.si ? 1 : 0)) + 2);
             const mainDisplay = gameFormat === 'stableford' ? getPoints(score) : score;
             const subDisplay = gameFormat === 'stableford' ? `${score} Strokes` : `${getPoints(score)} Pts`;
 
@@ -476,22 +432,8 @@
                     </div>
 
                     <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-6">
-                        <div className={`bg-white w-full max-w-xs p-8 rounded-[2.5rem] shadow-xl border text-center relative transition-all duration-300 ${isConfirmed ? 'border-emerald-500 bg-emerald-50' : 'border-slate-100'}`}>
-                            
-                            <div className="flex justify-center items-center gap-2 mb-4">
-                                {isEditing ? (
-                                    <div className="flex gap-1 animate-in">
-                                        <input className="w-24 bg-slate-100 rounded px-1 text-sm font-bold" value={activePlayer.name} onChange={e=>updateActivePlayer('name', e.target.value)} />
-                                        <input className="w-12 bg-slate-100 rounded px-1 text-sm font-bold" type="number" value={activePlayer.hcp} onChange={e=>updateActivePlayer('hcp', Number(e.target.value))} />
-                                        <button onClick={()=>setIsEditing(false)} className="text-xs bg-emerald-100 text-emerald-700 px-2 rounded">OK</button>
-                                    </div>
-                                ) : (
-                                    <button onClick={()=>setIsEditing(true)} className="text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition flex items-center gap-1">
-                                        Scoring for {activePlayer.name} (HCP {activePlayer.hcp}) ✏️
-                                    </button>
-                                )}
-                            </div>
-
+                        <div className={`bg-white w-full max-w-xs p-8 rounded-[2.5rem] shadow-xl border text-center relative transition-all duration-300 ${isConfirmed ? 'border-emerald-500 bg-emerald-50 ring-4 ring-emerald-100' : 'border-slate-100'}`}>
+                            <div className="mb-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Scoring for {activePlayer.name}</div>
                             <div className="flex items-center justify-between mt-2 mb-6">
                                 <button onClick={()=>updateScore(-1)} className="w-16 h-16 rounded-full bg-slate-100 text-3xl font-bold text-slate-600 hover:bg-slate-200 transition shadow-sm border border-slate-200">-</button>
                                 <div className="text-center">
@@ -500,90 +442,21 @@
                                 </div>
                                 <button onClick={()=>updateScore(1)} className="w-16 h-16 rounded-full bg-emerald-600 text-white text-3xl font-bold shadow-lg hover:bg-emerald-500 transition border border-emerald-500">+</button>
                             </div>
-
-                            {/* CONFIRM BUTTON */}
-                            <button 
-                                onClick={confirmScore} 
-                                className={`w-full py-3 rounded-xl font-bold text-sm transition-all shadow-md flex items-center justify-center gap-2 ${isConfirmed ? 'bg-emerald-600 text-white scale-95' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
-                            >
+                            <button onClick={confirmScore} className={`w-full py-3 rounded-xl font-bold text-sm transition-all shadow-md flex items-center justify-center gap-2 ${isConfirmed ? 'bg-emerald-600 text-white scale-95' : 'bg-slate-900 text-white hover:bg-slate-800'}`}>
                                 {isConfirmed ? <span>✅ Saved!</span> : <span>Confirm Score</span>}
                             </button>
-
-                        </div>
-
-                        <div className="w-full max-w-xs space-y-3">
-                            {caddyMsg && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl text-sm text-emerald-800 font-medium animate-in">💡 {caddyMsg}</div>}
-                            <button onClick={askTiger} disabled={loading} className="w-full bg-white border border-slate-200 py-4 rounded-2xl font-bold shadow-sm text-slate-700 flex items-center justify-center gap-2 hover:bg-slate-50 transition"><span>🐯</span> {loading ? "Thinking..." : "Tiger Strategy"}</button>
                         </div>
                     </div>
                 </div>
             );
         };
 
-        // 2. WILDLIFE TRACKER (Fixed Rendering)
-        const WildlifeView = ({ setView }) => {
-            const [sightings, setSightings] = useState([
-                { id: 1, animal: 'Crocodile', emoji: '🐊', hole: 13, time: '20m ago', alert: true },
-                { id: 2, animal: 'Fish Eagle', emoji: '🦅', hole: 5, time: '1h ago', alert: false }
-            ]);
-
-            const addSighting = (animal, emoji) => {
-                // Ensure state updates properly by creating a new array ref
-                const newSighting = { id: Date.now(), animal, emoji, hole: 'Current', time: 'Just now', alert: animal==='Crocodile' };
-                setSightings(prev => [newSighting, ...prev]);
-            };
-
-            return (
-                <div className="flex-1 bg-slate-50 flex flex-col h-full safe-pb">
-                    <div className="bg-emerald-900 p-6 pt-12 pb-8 rounded-b-[40px] shadow-lg text-white">
-                        <div className="flex justify-between items-center mb-4">
-                            <button onClick={() => setView('dashboard')} className="p-2 bg-white/20 rounded-full">⬅️</button>
-                            <h2 className="font-bold text-lg">Nature Watch</h2>
-                            <div className="w-8"></div>
-                        </div>
-                        <p className="opacity-80 text-sm text-center">Spot wildlife? Log it here to warn others.</p>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                        <div className="grid grid-cols-2 gap-4">
-                            <button onClick={()=>addSighting('Crocodile','🐊')} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 hover:bg-amber-50 border-amber-100 transition active:scale-95">
-                                <span className="text-4xl">🐊</span>
-                                <span className="font-bold text-amber-900">Log Croc</span>
-                            </button>
-                            <button onClick={()=>addSighting('Bird','🦅')} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 hover:bg-sky-50 border-sky-100 transition active:scale-95">
-                                <span className="text-4xl">📸</span>
-                                <span className="font-bold text-sky-900">Photo / Other</span>
-                            </button>
-                        </div>
-
-                        <div>
-                            <h3 className="font-bold text-slate-400 text-xs uppercase tracking-wider mb-3">Recent Feed</h3>
-                            <div className="space-y-3">
-                                {sightings.map(s => (
-                                    <div key={s.id} className="bg-white p-4 rounded-xl shadow-sm flex items-center gap-4 border border-slate-100 animate-slide-down">
-                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${s.alert ? 'bg-amber-100' : 'bg-slate-100'}`}>{s.emoji}</div>
-                                        <div className="flex-1">
-                                            <div className="flex justify-between">
-                                                <span className="font-bold text-slate-800">{s.animal}</span>
-                                                <span className="text-xs text-slate-400">{s.time}</span>
-                                            </div>
-                                            <p className="text-xs text-slate-500">Spotted near Hole {s.hole}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // --- MAIN APP SHELL ---
         function App() {
             const [user, setUser] = useState(null);
             const [view, setView] = useState('auth');
             const [players, setPlayers] = useState([]);
-            const [gameFormat, setGameFormat] = useState('stableford'); 
+            const [gameFormat, setGameFormat] = useState('stableford');
+            const [holeIdx, setHoleIdx] = useState(0);
 
             useEffect(() => onAuthStateChanged(auth, u => { setUser(u); if(u) setView('dashboard'); }), []);
             const login = async () => { try { await signInWithPopup(auth, googleProvider); } catch(e) { alert("Use Guest Mode in Colab"); } };
@@ -606,9 +479,9 @@
                 <>
                     {view === 'dashboard' && <Dashboard user={user} setView={setView} />}
                     {view === 'setup' && <SetupView setView={setView} setPlayers={setPlayers} setGameFormat={setGameFormat} />}
-                    {view === 'play' && <GameView players={players} setPlayers={setPlayers} setView={setView} gameFormat={gameFormat} />}
+                    {view === 'play' && <GameView players={players} setPlayers={setPlayers} setView={setView} gameFormat={gameFormat} holeIdx={holeIdx} setHoleIdx={setHoleIdx} />}
                     {view === 'leaderboard' && <LeaderboardView players={players} setView={setView} gameFormat={gameFormat} />}
-                    {view === 'wildlife' && <WildlifeView setView={setView} />}
+                    {view === 'wildlife' && <WildlifeView setView={setView} holeIdx={holeIdx} />}
                     {view === 'ai-caddy' && <CaddyView setView={setView} />}
                     
                     {(view === 'dashboard' || view === 'wildlife' || view === 'ai-caddy') && (
