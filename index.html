@@ -222,7 +222,10 @@
             const [isConfirmed, setIsConfirmed] = useState(false);
             
             const hole = HOLES[holeIdx];
-            const activePlayer = players[activePlayerId];
+            
+            // --- CRASH GUARD: Ensure players exist ---
+            if (!players || players.length === 0) return <div>Loading Players...</div>;
+            const activePlayer = players[activePlayerId] || players[0];
             const score = activePlayer.scores[hole.number] || hole.par;
 
             useEffect(() => setIsConfirmed(false), [activePlayerId, holeIdx]);
@@ -236,7 +239,9 @@
 
             const confirmScore = () => setIsConfirmed(true);
             const getPoints = (g) => Math.max(0, hole.par - (g - (activePlayer.hcp >= hole.si ? 1 : 0)) + 2);
-            
+            const mainDisplay = gameFormat === 'stableford' ? getPoints(score) : score;
+            const subDisplay = gameFormat === 'stableford' ? `${score} Strokes` : `${getPoints(score)} Pts`;
+
             return (
                 <div className="flex-1 flex flex-col h-full bg-slate-50 relative safe-pb page-enter">
                     <div className="bg-emerald-900 pt-10 pb-6 px-4 rounded-b-3xl shadow-lg z-10 text-white">
@@ -279,8 +284,8 @@
                             <div className="flex items-center justify-between mb-8">
                                 <button onClick={()=>updateScore(-1)} className="w-14 h-14 rounded-full bg-slate-50 text-slate-600 flex items-center justify-center border border-slate-200 active:scale-95 transition"><Icon name="minus" /></button>
                                 <div className="text-center">
-                                    <span className="text-7xl font-black text-slate-900 block leading-none">{score}</span>
-                                    {gameFormat === 'stableford' && <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full mt-2 inline-block">{getPoints(score)} PTS</span>}
+                                    <span className="text-7xl font-black text-slate-900 block leading-none">{mainDisplay}</span>
+                                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full mt-2 inline-block">{subDisplay}</span>
                                 </div>
                                 <button onClick={()=>updateScore(1)} className="w-14 h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-200 active:scale-95 transition"><Icon name="plus" /></button>
                             </div>
@@ -489,9 +494,11 @@
                     <Icon name="home" size={24} strokeWidth={view==='dashboard'?2.5:2} />
                     <span className="text-[10px] font-bold">Home</span>
                 </button>
+                
                 <button onClick={()=>setView('play')} className="mb-8 w-16 h-16 bg-emerald-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-emerald-200 border-4 border-slate-50 active:scale-95 transition-transform">
                     <Icon name="flag" size={28} fill="currentColor" />
                 </button>
+
                 <button onClick={()=>setView('wildlife')} className={`flex flex-col items-center gap-1 ${view==='wildlife'?'text-emerald-700':'text-slate-400'}`}>
                     <Icon name="trees" size={24} strokeWidth={view==='wildlife'?2.5:2} />
                     <span className="text-[10px] font-bold">Nature</span>
