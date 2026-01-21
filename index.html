@@ -27,14 +27,10 @@
         body { background-color: #f1f5f9; color: #0f172a; font-family: 'Inter', sans-serif; overflow: hidden; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .safe-pb { padding-bottom: 90px; }
-        
-        /* Pro Transitions */
         .page-enter { animation: fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* Chat Bubbles */
         .chat-bubble { max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.5; margin-bottom: 12px; }
         .user-bubble { background-color: #064e3b; color: white; border-bottom-right-radius: 4px; align-self: flex-end; margin-left: auto; }
         .ai-bubble { background-color: white; border: 1px solid #e2e8f0; color: #1e293b; border-bottom-left-radius: 4px; align-self: flex-start; }
@@ -114,17 +110,18 @@
                 </div>
 
                 <div className="p-5 space-y-4 -mt-6">
+                    {/* Tournament Button */}
                     <button onClick={() => setView('setup')} className="w-full bg-white p-5 rounded-2xl shadow-lg border border-slate-100 flex items-center justify-between group active:scale-[0.98] transition-transform duration-200">
                         <div className="text-left">
                             <div className="flex items-center gap-2 mb-1">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide">New Round</span>
+                                <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide">Tournament Mode</span>
                             </div>
                             <span className="block text-xl font-bold text-slate-800">Mangais Championship</span>
-                            <span className="text-xs text-slate-400">18 Holes • Stroke Play</span>
+                            <span className="text-xs text-slate-400">Multi-Flight • Live Scoring</span>
                         </div>
                         <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center border border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                            <Icon name="play" fill="currentColor" size={20} />
+                            <Icon name="trophy" fill="currentColor" size={20} />
                         </div>
                     </button>
 
@@ -142,7 +139,7 @@
             </div>
         );
 
-        // 2. SETUP
+        // 2. SETUP (Tournament/Flights)
         const SetupView = ({ setView, setPlayers, setGameFormat }) => {
             const [flights, setFlights] = useState([[{id: 1, name: 'You', hcp: 18}]]);
             const [format, setFormat] = useState('stableford'); 
@@ -153,12 +150,17 @@
                 newF[fIdx].push({ id: Date.now(), name: `Player ${newF[fIdx].length+1}`, hcp: 18 });
                 setFlights(newF);
             };
+            
+            const addFlight = () => {
+                setFlights([...flights, [{ id: Date.now(), name: 'Player 1', hcp: 18 }]]);
+            };
+
             const updatePlayer = (fIdx, pIdx, k, v) => {
                 const newF = [...flights];
                 newF[fIdx][pIdx][k] = v;
                 setFlights(newF);
             };
-            const addFlight = () => setFlights([...flights, [{ id: Date.now(), name: 'Player 1', hcp: 18 }]]);
+
             const start = () => {
                 const all = [];
                 flights.forEach((f, i) => f.forEach(p => all.push({ ...p, flight: i+1, scores: {} })));
@@ -171,7 +173,7 @@
                 <div className="flex-1 bg-slate-50 flex flex-col h-full p-5 pt-12 overflow-y-auto page-enter">
                     <div className="flex justify-between items-center mb-6">
                         <button onClick={() => setView('dashboard')} className="p-2 -ml-2 text-slate-400 hover:text-slate-600"><Icon name="x" /></button>
-                        <h2 className="text-lg font-bold text-slate-800">Round Setup</h2>
+                        <h2 className="text-lg font-bold text-slate-800">Tournament Setup</h2>
                         <div className="w-8"></div>
                     </div>
 
@@ -205,15 +207,94 @@
                         ))}
                     </div>
                     
-                    <button onClick={addFlight} className="mt-4 w-full py-3 border-2 border-slate-200 text-slate-400 rounded-xl font-bold text-sm hover:border-emerald-500">Add Flight ✈️</button>
+                    <button onClick={addFlight} className="mt-4 w-full py-3 border-2 border-slate-200 text-slate-400 rounded-xl font-bold text-sm hover:border-emerald-500 flex items-center justify-center gap-2"><Icon name="users" size={16}/> Add Another Flight</button>
+                    
                     <button onClick={start} className="mt-8 w-full bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-emerald-200 text-base flex items-center justify-center gap-2 active:scale-95 transition">
-                        Start Round <Icon name="arrow-right" size={18} />
+                        Start Tournament <Icon name="arrow-right" size={18} />
                     </button>
                 </div>
             );
         };
 
-        // 3. LEADERBOARD (Expandable)
+        // 3. GAME VIEW
+        const GameView = ({ players, setPlayers, setView, gameFormat, holeIdx, setHoleIdx }) => {
+            const [activePlayerId, setActivePlayerId] = useState(0); 
+            const [isConfirmed, setIsConfirmed] = useState(false);
+            
+            const hole = HOLES[holeIdx];
+            const activePlayer = players[activePlayerId];
+            const score = activePlayer.scores[hole.number] || hole.par;
+
+            useEffect(() => setIsConfirmed(false), [activePlayerId, holeIdx]);
+
+            const updateScore = (val) => {
+                setIsConfirmed(false);
+                const newPlayers = [...players];
+                newPlayers[activePlayerId].scores[hole.number] = Math.max(1, score + val);
+                setPlayers(newPlayers);
+            };
+
+            const confirmScore = () => setIsConfirmed(true);
+            const getPoints = (g) => Math.max(0, hole.par - (g - (activePlayer.hcp >= hole.si ? 1 : 0)) + 2);
+            
+            return (
+                <div className="flex-1 flex flex-col h-full bg-slate-50 relative safe-pb page-enter">
+                    <div className="bg-emerald-900 pt-10 pb-6 px-4 rounded-b-3xl shadow-lg z-10 text-white">
+                        <div className="flex justify-between items-center mb-4">
+                            <button onClick={()=>setView('dashboard')}><Icon name="home" className="text-emerald-200" /></button>
+                            <span className="font-bold text-emerald-100 text-xs uppercase tracking-widest">Hole {hole.number}</span>
+                            <button onClick={()=>setView('leaderboard')}><Icon name="list" className="text-emerald-200" /></button>
+                        </div>
+                        <div className="flex justify-between items-end">
+                            <div>
+                                <h2 className="text-4xl font-black mb-1">{hole.par} <span className="text-lg font-medium opacity-60">PAR</span></h2>
+                                <div className="flex gap-3 text-xs font-bold text-emerald-300">
+                                    <span>SI {hole.si}</span>
+                                    <span>•</span>
+                                    <span>{hole.dist}m</span>
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={()=>setHoleIdx(Math.max(0, holeIdx-1))} disabled={holeIdx===0} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 disabled:opacity-30"><Icon name="chevron-left" /></button>
+                                <button onClick={()=>setHoleIdx(Math.min(17, holeIdx+1))} disabled={holeIdx===17} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 disabled:opacity-30"><Icon name="chevron-right" /></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex overflow-x-auto px-4 py-3 gap-2 bg-white border-b border-slate-100 no-scrollbar">
+                        {players.map((p, i) => (
+                            <button key={i} onClick={()=>setActivePlayerId(i)} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${activePlayerId === i ? 'bg-emerald-900 text-white shadow-md' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>
+                                {p.name.split(' ')[0]}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-6">
+                        <div className={`w-full max-w-xs bg-white rounded-3xl p-6 shadow-xl border transition-all duration-300 ${isConfirmed ? 'border-emerald-500 ring-2 ring-emerald-100' : 'border-slate-100'}`}>
+                            <div className="text-center mb-6">
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Scoring For</span>
+                                <span className="text-lg font-bold text-slate-800">{activePlayer.name}</span>
+                            </div>
+
+                            <div className="flex items-center justify-between mb-8">
+                                <button onClick={()=>updateScore(-1)} className="w-14 h-14 rounded-full bg-slate-50 text-slate-600 flex items-center justify-center border border-slate-200 active:scale-95 transition"><Icon name="minus" /></button>
+                                <div className="text-center">
+                                    <span className="text-7xl font-black text-slate-900 block leading-none">{score}</span>
+                                    {gameFormat === 'stableford' && <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full mt-2 inline-block">{getPoints(score)} PTS</span>}
+                                </div>
+                                <button onClick={()=>updateScore(1)} className="w-14 h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-200 active:scale-95 transition"><Icon name="plus" /></button>
+                            </div>
+
+                            <button onClick={confirmScore} className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${isConfirmed ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-900 text-white shadow-lg hover:bg-slate-800'}`}>
+                                {isConfirmed ? <><Icon name="check" size={18}/> Score Saved</> : "Confirm Score"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // 4. LEADERBOARD
         const LeaderboardView = ({ players, setView, gameFormat }) => {
             const [expandedId, setExpandedId] = useState(null);
             const getPoints = (g, hcp, si, par) => Math.max(0, par - (g - (hcp >= si ? 1 : 0)) + 2);
@@ -262,16 +343,8 @@
                                     </div>
                                     {isExpanded && (
                                         <div className="bg-slate-50 border-t border-slate-100 p-3 animate-slide-down">
-                                            <div className="grid grid-cols-9 gap-1 text-center mb-2">
-                                                {HOLES.slice(0,9).map(h => (
-                                                    <div key={h.number} className="bg-white rounded p-1 border border-slate-100">
-                                                        <div className="text-[8px] font-bold text-slate-400">{h.number}</div>
-                                                        <div className="font-bold text-sm text-slate-800">{p.scores[h.number] || '-'}</div>
-                                                    </div>
-                                                ))}
-                                            </div>
                                             <div className="grid grid-cols-9 gap-1 text-center">
-                                                {HOLES.slice(9,18).map(h => (
+                                                {HOLES.map(h => (
                                                     <div key={h.number} className="bg-white rounded p-1 border border-slate-100">
                                                         <div className="text-[8px] font-bold text-slate-400">{h.number}</div>
                                                         <div className="font-bold text-sm text-slate-800">{p.scores[h.number] || '-'}</div>
@@ -288,77 +361,12 @@
             );
         };
 
-        // 4. GAME VIEW (Heart)
-        const GameView = ({ players, setPlayers, setView, gameFormat, holeIdx, setHoleIdx }) => {
-            const [activePlayerId, setActivePlayerId] = useState(0); 
-            const [isConfirmed, setIsConfirmed] = useState(false);
-            const hole = HOLES[holeIdx];
-            const activePlayer = players[activePlayerId];
-            const score = activePlayer.scores[hole.number] || hole.par;
-
-            useEffect(() => setIsConfirmed(false), [activePlayerId, holeIdx]);
-
-            const updateScore = (val) => {
-                setIsConfirmed(false);
-                const newPlayers = [...players];
-                newPlayers[activePlayerId].scores[hole.number] = Math.max(1, score + val);
-                setPlayers(newPlayers);
-            };
-            const confirmScore = () => setIsConfirmed(true);
-            const getPoints = (g) => Math.max(0, hole.par - (g - (activePlayer.hcp >= hole.si ? 1 : 0)) + 2);
-            
-            return (
-                <div className="flex-1 flex flex-col h-full bg-slate-50 relative safe-pb page-enter">
-                    <div className="bg-emerald-900 pt-10 pb-6 px-4 rounded-b-3xl shadow-lg z-10 text-white">
-                        <div className="flex justify-between items-center mb-4">
-                            <button onClick={()=>setView('dashboard')}><Icon name="home" className="text-emerald-200" /></button>
-                            <span className="font-bold text-emerald-100 text-xs uppercase tracking-widest">Hole {hole.number}</span>
-                            <button onClick={()=>setView('leaderboard')}><Icon name="list" className="text-emerald-200" /></button>
-                        </div>
-                        <div className="flex justify-between items-end">
-                            <div>
-                                <h2 className="text-4xl font-black mb-1">{hole.par} <span className="text-lg font-medium opacity-60">PAR</span></h2>
-                                <div className="flex gap-3 text-xs font-bold text-emerald-300"><span>SI {hole.si}</span><span>•</span><span>{hole.dist}m</span></div>
-                            </div>
-                            <div className="flex gap-2">
-                                <button onClick={()=>setHoleIdx(Math.max(0, holeIdx-1))} disabled={holeIdx===0} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 disabled:opacity-30"><Icon name="chevron-left" /></button>
-                                <button onClick={()=>setHoleIdx(Math.min(17, holeIdx+1))} disabled={holeIdx===17} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 disabled:opacity-30"><Icon name="chevron-right" /></button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="flex overflow-x-auto px-4 py-3 gap-2 bg-white border-b border-slate-100 no-scrollbar">
-                        {players.map((p, i) => (
-                            <button key={i} onClick={()=>setActivePlayerId(i)} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${activePlayerId === i ? 'bg-emerald-900 text-white shadow-md' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>{p.name.split(' ')[0]}</button>
-                        ))}
-                    </div>
-
-                    <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-6">
-                        <div className={`w-full max-w-xs bg-white rounded-3xl p-6 shadow-xl border transition-all duration-300 ${isConfirmed ? 'border-emerald-500 ring-2 ring-emerald-100' : 'border-slate-100'}`}>
-                            <div className="text-center mb-6">
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Scoring For</span>
-                                <span className="text-lg font-bold text-slate-800">{activePlayer.name}</span>
-                            </div>
-                            <div className="flex items-center justify-between mb-8">
-                                <button onClick={()=>updateScore(-1)} className="w-14 h-14 rounded-full bg-slate-50 text-slate-600 flex items-center justify-center border border-slate-200 active:scale-95 transition"><Icon name="minus" /></button>
-                                <div className="text-center">
-                                    <span className="text-7xl font-black text-slate-900 block leading-none">{score}</span>
-                                    {gameFormat === 'stableford' && <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full mt-2 inline-block">{getPoints(score)} PTS</span>}
-                                </div>
-                                <button onClick={()=>updateScore(1)} className="w-14 h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-200 active:scale-95 transition"><Icon name="plus" /></button>
-                            </div>
-                            <button onClick={confirmScore} className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${isConfirmed ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-900 text-white shadow-lg hover:bg-slate-800'}`}>
-                                {isConfirmed ? <><Icon name="check" size={18}/> Score Saved</> : "Confirm Score"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // 5. WILDLIFE (Modal)
+        // 5. WILDLIFE
         const WildlifeView = ({ setView, holeIdx }) => {
-            const [sightings, setSightings] = useState([{ id: 1, animal: 'Crocodile', hole: 13, loc: 'Water Hazard', time: '20m ago', alert: true }]);
+            const [sightings, setSightings] = useState([
+                { id: 1, animal: 'Crocodile', hole: 13, loc: 'Water Hazard', time: '20m ago', alert: true },
+                { id: 2, animal: 'Fish Eagle', hole: 5, time: '1h ago', alert: false }
+            ]);
             const [modal, setModal] = useState(null);
             const [loc, setLoc] = useState('');
 
@@ -373,7 +381,8 @@
                     <div className="bg-emerald-900 p-6 pt-12 pb-6 text-white rounded-b-3xl shadow-lg">
                         <div className="flex justify-between items-center">
                             <button onClick={()=>setView('dashboard')}><Icon name="arrow-left" /></button>
-                            <h2 className="font-bold">Nature Watch</h2><div className="w-6"></div>
+                            <h2 className="font-bold">Nature Watch</h2>
+                            <div className="w-6"></div>
                         </div>
                     </div>
                     
@@ -419,7 +428,7 @@
             );
         };
 
-        // 6. CADDY VIEW (Robust)
+        // 6. CADDY
         const CaddyView = ({ setView }) => {
             const [messages, setMessages] = useState([{ role: 'model', text: "Hello! I'm your Mangais AI Caddy. Ask me about wind, strategy, or rules." }]);
             const [input, setInput] = useState('');
@@ -473,18 +482,16 @@
             );
         };
 
-        // 7. NAV BAR (Fixed Bottom)
+        // 7. NAV
         const NavBar = ({ view, setView }) => (
             <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 pb-8 pt-2 px-6 flex justify-between items-center z-20">
                 <button onClick={()=>setView('dashboard')} className={`flex flex-col items-center gap-1 ${view==='dashboard'?'text-emerald-700':'text-slate-400'}`}>
                     <Icon name="home" size={24} strokeWidth={view==='dashboard'?2.5:2} />
                     <span className="text-[10px] font-bold">Home</span>
                 </button>
-                
                 <button onClick={()=>setView('play')} className="mb-8 w-16 h-16 bg-emerald-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-emerald-200 border-4 border-slate-50 active:scale-95 transition-transform">
                     <Icon name="flag" size={28} fill="currentColor" />
                 </button>
-
                 <button onClick={()=>setView('wildlife')} className={`flex flex-col items-center gap-1 ${view==='wildlife'?'text-emerald-700':'text-slate-400'}`}>
                     <Icon name="trees" size={24} strokeWidth={view==='wildlife'?2.5:2} />
                     <span className="text-[10px] font-bold">Nature</span>
@@ -530,8 +537,8 @@
                     {view === 'dashboard' && <Dashboard user={user} setView={setView} />}
                     {view === 'setup' && <SetupView setView={setView} setPlayers={setPlayers} setGameFormat={setGameFormat} />}
                     {view === 'play' && <GameView players={players} setPlayers={setPlayers} setView={setView} gameFormat={gameFormat} holeIdx={holeIdx} setHoleIdx={setHoleIdx} />}
-                    {view === 'wildlife' && <WildlifeView setView={setView} holeIdx={holeIdx} />}
                     {view === 'leaderboard' && <LeaderboardView players={players} setView={setView} gameFormat={gameFormat} />}
+                    {view === 'wildlife' && <WildlifeView setView={setView} holeIdx={holeIdx} />}
                     {view === 'ai-caddy' && <CaddyView setView={setView} />}
                     
                     {(view === 'dashboard' || view === 'play' || view === 'wildlife') && <NavBar view={view} setView={setView} />}
