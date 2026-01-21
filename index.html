@@ -3,276 +3,288 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mangais Golf & Nature</title>
+    <title>Mangais Golf Club</title>
     
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-
     <script>
         window.onerror = function(msg, url, line) {
-            document.body.innerHTML = `<div style="color:white;background:red;padding:20px;"><h1>💥 APP CRASHED</h1><p>${msg}</p><p>Line: ${line}</p></div>`;
+            document.body.innerHTML = '<div style="color:red; background:white; padding:20px; font-family:sans-serif;"><h3>⚠️ App Error</h3><p>' + msg + '</p><p>Line: ' + line + '</p></div>';
         };
     </script>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+            "firebase/auth": "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"
+        }
+    }
+    </script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
     <style> 
-        body { background-color: #022c22; color: white; font-family: 'Inter', sans-serif; overflow: hidden; }
-        .glass { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .glass-nav { background: rgba(6, 78, 59, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.1); }
+        body { background-color: #f3f4f6; color: #1f2937; font-family: 'Inter', sans-serif; overflow: hidden; }
+        .app-green { background-color: #059669; }
+        .text-green { color: #059669; }
+        .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; }
+        
+        .score-circle { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 14px; }
+        .birdie { background-color: #ef4444; color: white; } /* Red */
+        .par { background-color: #e5e7eb; color: #374151; }   /* Grey */
+        .bogey { background-color: #3b82f6; color: white; }   /* Blue */
+
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes pop { 0% { transform: scale(0.9); opacity:0; } 100% { transform: scale(1); opacity:1; } }
+        .fab-shadow { box-shadow: 0 10px 25px -5px rgba(5, 150, 105, 0.4); }
     </style>
 </head>
 <body>
-    <div id="root" class="h-screen w-full flex flex-col"></div>
+    <div id="root" class="h-screen w-full flex flex-col max-w-md mx-auto bg-gray-50 shadow-2xl overflow-hidden"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
-        const { createRoot } = ReactDOM;
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { initializeApp } from 'firebase/app';
+        import { getAuth, signInAnonymously, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
 
-        // --- 1. DATA ---
-        // The key is injected by the server
-        const API_KEY = window.ENV_API_KEY; 
+        // --- 1. CONFIGURATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDSS05uLPrAKyPt6yBrNt1-xyWmHpJ0L-w",
+            authDomain: "mangais-golf.firebaseapp.com",
+            projectId: "mangais-golf",
+            storageBucket: "mangais-golf.firebasestorage.app",
+            messagingSenderId: "107579479973",
+            appId: "1:107579479973:web:2a57115ea51d296f3ffa4c"
+        };
 
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const googleProvider = new GoogleAuthProvider();
+        
+        // AI Key
+        const API_KEY = "AIzaSyBYd4jCxHZohdIHdu6fCmlU7JFvD2wAL2c"; 
+
+        // --- 2. DATA ---
         const COURSE_DATA = [
-            { hole: 1, par: 5, si: 16, dist: 473, tip: "Wide fairway 🌴. Good warm up." },
-            { hole: 2, par: 4, si: 14, dist: 333, tip: "Watch the bunkers 🏖️." },
-            { hole: 3, par: 4, si: 8, dist: 387, tip: "Dogleg right ↪️. Cut the corner?" },
-            { hole: 4, par: 3, si: 12, dist: 206, tip: "Long iron needed 🏌️‍♂️." },
-            { hole: 5, par: 5, si: 2, dist: 500, tip: "Water hazard 💧 on second shot." },
-            { hole: 6, par: 4, si: 18, dist: 355, tip: "Birdie chance! 🦅 Attack the pin." },
-            { hole: 7, par: 4, si: 10, dist: 399, tip: "Keep it left ⬅️ away from trees." },
-            { hole: 8, par: 3, si: 6, dist: 223, tip: "Wind swirls here 🌬️." },
-            { hole: 9, par: 4, si: 4, dist: 412, tip: "Uphill approach ⛰️." },
-            { hole: 10, par: 4, si: 3, dist: 384, tip: "Tight fairway. Precision key 🎯." },
-            { hole: 11, par: 3, si: 11, dist: 163, tip: "Don't go long 🛑." },
-            { hole: 12, par: 5, si: 13, dist: 511, tip: "⚠️ CROCODILES RIGHT 🐊." },
-            { hole: 13, par: 4, si: 9, dist: 382, tip: "Center green is safe 🟢." },
-            { hole: 14, par: 4, si: 7, dist: 374, tip: "Kwanza River view 🌊." },
-            { hole: 15, par: 3, si: 17, dist: 218, tip: "Short but technical 🧠." },
-            { hole: 16, par: 4, si: 5, dist: 391, tip: "Two tier green 📊." },
-            { hole: 17, par: 5, si: 1, dist: 483, tip: "Index 1 💀. Play safe!" },
-            { hole: 18, par: 4, si: 15, dist: 324, tip: "Home stretch 🏠. Enjoy the view." }
+            { hole: 1, par: 5, si: 16, dist: 473 }, { hole: 2, par: 4, si: 14, dist: 333 },
+            { hole: 3, par: 4, si: 8, dist: 387 }, { hole: 4, par: 3, si: 12, dist: 206 },
+            { hole: 5, par: 5, si: 2, dist: 500 }, { hole: 6, par: 4, si: 18, dist: 355 },
+            { hole: 7, par: 4, si: 10, dist: 399 }, { hole: 8, par: 3, si: 6, dist: 223 },
+            { hole: 9, par: 4, si: 4, dist: 412 }, { hole: 10, par: 4, si: 3, dist: 384 },
+            { hole: 11, par: 3, si: 11, dist: 163 }, { hole: 12, par: 5, si: 13, dist: 511, tip: "⚠️ Crocodiles!" },
+            { hole: 13, par: 4, si: 9, dist: 382 }, { hole: 14, par: 4, si: 7, dist: 374 },
+            { hole: 15, par: 3, si: 17, dist: 218 }, { hole: 16, par: 4, si: 5, dist: 391 },
+            { hole: 17, par: 5, si: 1, dist: 483 }, { hole: 18, par: 4, si: 15, dist: 324 }
         ];
 
-        const ANIMALS = [
-            { name: "Crocodile", emoji: "🐊", pts: 50 },
-            { name: "Monkey", emoji: "🐒", pts: 20 },
-            { name: "Hippo", emoji: "🦛", pts: 100 },
-            { name: "Exotic Bird", emoji: "🦜", pts: 30 },
-            { name: "Snake", emoji: "🐍", pts: 40 }
-        ];
+        // --- 3. AI CADDY LOGIC ---
+        async function askCaddy(holeInfo) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`;
+            const prompt = `Caddy advice for Mangais Golf Club Hole ${holeInfo.hole} (Par ${holeInfo.par}, ${holeInfo.dist}m). Keep it under 15 words. Pro strategy.`;
+            try {
+                const response = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+                const data = await response.json();
+                return data.candidates[0].content.parts[0].text;
+            } catch (e) { return "Driver down the middle."; }
+        }
 
-        // --- 2. AUTHENTICATION (Simulated) ---
+        // --- 4. AUTH HOOK ---
         const useAuth = () => {
             const [user, setUser] = useState(null);
-            useEffect(() => {
-                const saved = localStorage.getItem('mangais_user');
-                if (saved) setUser(JSON.parse(saved));
-            }, []);
-            const login = (email) => {
-                const u = { email, name: email.split('@')[0], uid: Date.now() };
-                localStorage.setItem('mangais_user', JSON.stringify(u));
-                setUser(u);
-            };
-            const logout = () => {
-                localStorage.removeItem('mangais_user');
-                setUser(null);
-            };
-            return { user, login, logout };
-        };
-
-        // --- 3. SCORING ---
-        const calcStableford = (par, si, shots, hcp) => {
-            if (!shots) return 0;
-            let free = 0;
-            if (hcp >= si) free = 1;
-            if (hcp - 18 >= si) free = 2;
-            const net = shots - free;
-            return Math.max(0, (par - net) + 2);
-        };
-
-        // --- 4. APP ---
-        function App() {
-            const { user, login, logout } = useAuth();
-            const [view, setView] = useState('auth');
-            const [logs, setLogs] = useState([]);
-            const [camera, setCamera] = useState(false);
+            useEffect(() => onAuthStateChanged(auth, setUser), []);
             
-            // Game State
-            const [holeIdx, setHoleIdx] = useState(0); // 0-17
+            const loginGoogle = () => signInWithPopup(auth, googleProvider).catch(e => {
+                if(e.code === 'auth/unauthorized-domain') {
+                    alert("⚠️ Domain Error (Colab)\n\nPlease use 'Try as Guest' for testing inside Colab.\n\nTo use Google Login, deploy this file to Render/Netlify.");
+                } else {
+                    alert(e.message);
+                }
+            });
+            
+            const loginGuest = () => signInAnonymously(auth).catch(e => alert(e.message));
+            const logout = () => signOut(auth);
+            return { user, loginGoogle, loginGuest, logout };
+        };
+
+        // --- 5. MAIN APP ---
+        function App() {
+            const { user, loginGoogle, loginGuest, logout } = useAuth();
+            const [view, setView] = useState('auth'); 
+            const [currentHole, setCurrentHole] = useState(1);
             const [scores, setScores] = useState({});
-            const [playerHcp, setPlayerHcp] = useState(18);
+            const [caddyMsg, setCaddyMsg] = useState("");
+            const [loading, setLoading] = useState(false);
+            const [playerHcp] = useState(13); // Default HCP
 
             useEffect(() => { if (user) setView('home'); else setView('auth'); }, [user]);
 
-            const hole = COURSE_DATA[holeIdx];
-            const scoreData = scores[hole.hole] || { shots: hole.par, putts: 2 };
+            const holeInfo = COURSE_DATA.find(h => h.hole === currentHole);
+            const currentScore = scores[currentHole] || holeInfo?.par || 4;
 
-            const updateScore = (type, val) => {
-                const current = scores[hole.hole] || { shots: hole.par, putts: 2 };
-                const newVal = Math.max(0, current[type] + val);
-                setScores({ ...scores, [hole.hole]: { ...current, [type]: newVal } });
+            const updateScore = (val) => setScores({ ...scores, [currentHole]: Math.max(1, currentScore + val) });
+            
+            const getPoints = (h, s) => {
+                let free = 0;
+                if (playerHcp >= h.si) free = 1;
+                const net = s - free;
+                return Math.max(0, h.par - net + 2);
             };
 
-            const logAnimal = (animal) => {
-                const newLog = { 
-                    id: Date.now(), 
-                    animal, 
-                    hole: hole.hole, 
-                    time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
-                    user: user.name 
-                };
-                setLogs([newLog, ...logs]);
-                setCamera(false);
-                alert(`📸 Captured ${animal.name}! +${animal.pts} pts`);
+            const handleAskCaddy = async () => {
+                setLoading(true);
+                const advice = await askCaddy(holeInfo);
+                setCaddyMsg(advice);
+                setLoading(false);
             };
 
-            // --- VIEW: AUTH ---
+            const totalPoints = Object.entries(scores).reduce((acc, [h, s]) => {
+                const info = COURSE_DATA.find(cd => cd.hole === parseInt(h));
+                return acc + getPoints(info, s);
+            }, 0);
+
+            // --- VIEW: LOGIN ---
             if (!user) return (
-                <div className="h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-green-900 to-black text-center">
-                    <div className="text-8xl mb-4 animate-bounce">🐊</div>
-                    <h1 className="text-4xl font-black mb-2">MANGAIS</h1>
-                    <p className="text-emerald-400 text-xs font-bold tracking-widest uppercase mb-10">Golf & Nature Reserve</p>
-                    <div className="w-full max-w-sm space-y-4">
-                        <button onClick={() => login('tiger@mangais.com')} className="w-full bg-white text-black py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-105 transition">
-                            <span>🐯</span> Login as Tiger
+                <div className="h-full flex flex-col items-center justify-center p-8 bg-white">
+                    <div className="w-24 h-24 bg-emerald-100 rounded-3xl flex items-center justify-center text-5xl mb-6 shadow-sm">⛳</div>
+                    <h1 className="text-3xl font-black text-gray-900 mb-2">Mangais Golf</h1>
+                    <p className="text-gray-400 font-bold text-sm mb-12 uppercase tracking-widest">Official Scorecard App</p>
+                    
+                    <div className="w-full space-y-3">
+                        <button onClick={loginGoogle} className="w-full bg-gray-900 text-white py-4 rounded-xl font-bold shadow-xl flex items-center justify-center gap-3">
+                            <span>🔵</span> Sign in with Google
                         </button>
-                        <button onClick={() => login('guest@mangais.com')} className="w-full glass text-white py-4 rounded-xl font-bold">
-                            Guest Access
+                        <button onClick={loginGuest} className="w-full bg-gray-100 text-gray-600 py-4 rounded-xl font-bold hover:bg-gray-200">
+                            Try as Guest
                         </button>
                     </div>
                 </div>
             );
 
-            // --- VIEW: HOME ---
+            // --- VIEW: HOME DASHBOARD ---
             if (view === 'home') return (
-                <div className="h-full flex flex-col p-6 bg-[url('https://images.unsplash.com/photo-1593111774240-d529f12cf4bb?q=80&w=1000')] bg-cover bg-center">
-                    <div className="absolute inset-0 bg-black/60"></div>
-                    <div className="relative z-10 flex flex-col h-full">
-                        <div className="flex justify-between items-center mb-10">
-                            <div>
-                                <h1 className="text-3xl font-black">Hi, {user.name} 👋</h1>
-                                <p className="text-emerald-400 font-bold text-sm">HCP {playerHcp} • Eco-Rank: Scout</p>
-                            </div>
-                            <button onClick={logout} className="p-3 glass rounded-full text-xl">🚪</button>
+                <div className="h-full flex flex-col bg-gray-50">
+                    {/* Header */}
+                    <div className="h-48 bg-emerald-600 relative overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1535131749006-b7f58c99034b?q=80&w=1000" className="w-full h-full object-cover opacity-40 mix-blend-overlay" />
+                        <div className="absolute bottom-4 left-4 text-white">
+                            <p className="opacity-90 font-medium">Welcome back,</p>
+                            <h1 className="text-3xl font-bold">{user.displayName || "Golfer"}</h1>
                         </div>
+                        <div className="absolute bottom-4 right-4 bg-white/20 backdrop-blur text-white px-3 py-1 rounded-lg font-bold text-xs border border-white/30">
+                            HCP {playerHcp}
+                        </div>
+                    </div>
+
+                    {/* Main Actions */}
+                    <div className="flex-1 p-4 -mt-6 relative z-10 space-y-4">
+                        <div className="card p-6 text-center shadow-lg">
+                            <button onClick={() => setView('play')} className="bg-emerald-600 text-white w-full py-4 rounded-2xl font-bold text-lg fab-shadow active:scale-95 transition flex items-center justify-center gap-2">
+                                <span>🏌️‍♂️</span> PLAY ROUND
+                            </button>
+                        </div>
+                        
                         <div className="grid grid-cols-2 gap-4">
-                            <button onClick={() => setView('game')} className="glass p-8 rounded-2xl flex flex-col items-center gap-2 hover:bg-white/10 transition">
-                                <span className="text-5xl">⛳</span>
-                                <span className="font-bold">Play Golf</span>
-                            </button>
-                            <button onClick={() => setView('nature')} className="glass p-8 rounded-2xl flex flex-col items-center gap-2 hover:bg-white/10 transition">
-                                <span className="text-5xl">📸</span>
-                                <span className="font-bold">Nature Log</span>
-                            </button>
+                            <button onClick={()=>alert("Coming soon!")} className="card p-4 font-bold text-gray-600 hover:bg-gray-50">🏆 Events</button>
+                            <button onClick={()=>alert("Coming soon!")} className="card p-4 font-bold text-gray-600 hover:bg-gray-50">👥 Friends</button>
                         </div>
-                        <div className="mt-8 glass p-6 rounded-2xl">
-                            <h3 className="font-bold text-emerald-300 mb-2">📢 Resort Alerts</h3>
-                            <p className="text-sm text-gray-200">🐊 Croc spotted near Hole 12.</p>
+
+                        <div className="card p-4 bg-emerald-50 border-emerald-100">
+                            <h3 className="text-xs font-bold text-emerald-800 uppercase mb-1">📢 Course Alert</h3>
+                            <p className="text-sm text-emerald-700">Croc spotted near Hole 12 water hazard. Please proceed with caution.</p>
                         </div>
+                    </div>
+                    
+                    {/* Footer */}
+                    <div className="p-4 flex justify-center pb-8">
+                        <button onClick={logout} className="text-xs font-bold text-gray-400 uppercase tracking-widest">Sign Out</button>
                     </div>
                 </div>
             );
 
-            // --- VIEW: NATURE ---
-            if (view === 'nature') return (
-                <div className="h-full flex flex-col bg-stone-900">
-                    <div className="p-4 glass-nav flex items-center justify-between sticky top-0 z-20">
-                        <button onClick={() => setView('home')} className="text-2xl">🔙</button>
-                        <h2 className="font-black text-emerald-400">NATURE WATCH</h2>
-                        <div className="w-8"></div>
-                    </div>
-                    <div className="flex-1 p-4 overflow-y-auto">
-                        <button onClick={() => setCamera(true)} className="w-full bg-emerald-600 py-8 rounded-2xl flex flex-col items-center gap-2 shadow-lg mb-6 active:scale-95 transition">
-                            <span className="text-5xl">📸</span>
-                            <span className="font-bold">LOG SIGHTING</span>
-                        </button>
-                        <h3 className="font-bold text-gray-500 text-xs uppercase mb-3">Recent Feed</h3>
-                        {logs.length === 0 ? <div className="text-center text-gray-600 py-10">No animals seen yet...</div> : 
-                            logs.map(log => (
-                                <div key={log.id} className="glass p-4 rounded-xl flex gap-4 mb-3 pop">
-                                    <div className="w-16 h-16 bg-emerald-900/50 rounded-lg flex items-center justify-center text-3xl">{log.animal.emoji}</div>
-                                    <div>
-                                        <h4 className="font-bold text-lg">{log.animal.name}</h4>
-                                        <p className="text-xs text-emerald-400">Hole {log.hole} • {log.user}</p>
-                                    </div>
-                                </div>
-                            ))
-                        }
-                    </div>
-                    {/* CAMERA MODAL */}
-                    {camera && (
-                        <div className="absolute inset-0 bg-black z-50 flex flex-col p-6">
-                            <div className="flex-1 border-2 border-white/30 rounded-3xl relative bg-gray-900 flex items-center justify-center">
-                                <div className="text-gray-500">[ Camera View ]</div>
-                                <div className="absolute w-40 h-40 border-2 border-yellow-400/50 rounded-lg"></div>
-                            </div>
-                            <div className="mt-6">
-                                <h3 className="text-center font-bold mb-4">What did you see?</h3>
-                                <div className="flex gap-2 overflow-x-auto pb-4">
-                                    {ANIMALS.map(a => (
-                                        <button key={a.name} onClick={() => logAnimal(a)} className="bg-gray-800 p-4 rounded-xl flex flex-col items-center w-24 border border-gray-700">
-                                            <span className="text-3xl mb-1">{a.emoji}</span>
-                                            <span className="text-xs font-bold">{a.name}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                                <button onClick={() => setCamera(false)} className="w-full py-4 text-gray-400 font-bold">Cancel</button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-
-            // --- VIEW: GAME ---
-            if (view === 'game') return (
-                <div className="h-full flex flex-col bg-gray-900">
-                    <div className="glass-nav p-4 flex justify-between items-end">
-                        <button onClick={() => setView('home')} className="text-xl">🏠</button>
+            // --- VIEW: PLAY (HOLE VIEW) ---
+            if (view === 'play') return (
+                <div className="h-full flex flex-col bg-gray-50">
+                    {/* Top Bar */}
+                    <div className="bg-white p-4 shadow-sm flex justify-between items-center z-10 border-b border-gray-100">
+                        <button onClick={() => setView('home')} className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-full">🏠</button>
                         <div className="text-center">
-                            <h2 className="text-2xl font-black">HOLE {hole.hole}</h2>
-                            <p className="text-emerald-400 text-xs font-bold">PAR {hole.par} • SI {hole.si}</p>
+                            <h2 className="font-black text-xl text-gray-800">HOLE {currentHole}</h2>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">PAR {holeInfo.par} • SI {holeInfo.si} • {holeInfo.dist}M</p>
                         </div>
-                        <div className="text-xl font-black text-yellow-400">
-                            {calcStableford(hole.par, hole.si, scoreData.shots, playerHcp)} <span className="text-xs">PTS</span>
-                        </div>
+                        <button onClick={() => setView('scorecard')} className="bg-emerald-50 text-emerald-700 px-3 py-2 rounded-lg text-xs font-bold border border-emerald-100">CARD</button>
                     </div>
-                    <div className="flex-1 p-6 flex flex-col items-center overflow-y-auto">
-                        <div className="bg-emerald-900/40 border border-emerald-500/30 p-4 rounded-xl mb-6 text-center w-full">
-                            <p className="text-emerald-100 text-sm italic">"{hole.tip}"</p>
-                        </div>
-                        
-                        {/* BIG SCORE CONTROLS */}
-                        <div className="flex items-center gap-6 mb-8">
-                            <button onClick={() => updateScore('shots', -1)} className="w-16 h-16 rounded-full glass text-3xl font-bold">-</button>
-                            <div className="text-center">
-                                <div className="text-9xl font-black leading-none">{scoreData.shots}</div>
-                                <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">Strokes</div>
+
+                    <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
+                        {/* Score Control */}
+                        <div className="card w-full max-w-xs p-6 text-center mb-6 shadow-xl border-0">
+                            <div className="flex items-center justify-between mb-6">
+                                <button onClick={() => updateScore(-1)} className="w-14 h-14 rounded-full bg-gray-100 text-2xl font-bold hover:bg-gray-200 transition text-gray-600">-</button>
+                                <div className={`text-8xl font-black ${currentScore < holeInfo.par ? 'text-red-500' : currentScore > holeInfo.par ? 'text-blue-600' : 'text-gray-800'}`}>
+                                    {currentScore}
+                                </div>
+                                <button onClick={() => updateScore(1)} className="w-14 h-14 rounded-full bg-emerald-600 text-white text-2xl font-bold shadow-lg hover:bg-emerald-500 transition">+</button>
                             </div>
-                            <button onClick={() => updateScore('shots', 1)} className="w-16 h-16 rounded-full bg-emerald-500 text-black text-3xl font-bold shadow-lg shadow-emerald-500/50">+</button>
-                        </div>
-                        
-                        {/* PUTTS */}
-                        <div className="bg-black/40 rounded-full px-6 py-3 flex items-center gap-6 border border-white/10 mb-8">
-                            <span className="text-xs font-bold text-gray-400">PUTTS</span>
-                            <button onClick={() => updateScore('putts', -1)} className="text-xl font-bold text-gray-400">-</button>
-                            <span className="font-bold text-xl">{scoreData.putts}</span>
-                            <button onClick={() => updateScore('putts', 1)} className="text-xl font-bold text-white">+</button>
+                            <div className="inline-block bg-gray-100 px-6 py-2 rounded-full font-bold text-sm text-gray-500 uppercase tracking-wide">
+                                {getPoints(holeInfo, currentScore)} Stableford Pts
+                            </div>
                         </div>
 
-                        {/* NAV */}
-                        <div className="flex gap-4 w-full">
-                            <button onClick={() => setView('nature')} className="glass flex-1 py-4 rounded-xl font-bold flex items-center justify-center gap-2">
-                                <span>🐊</span> Sighting
-                            </button>
-                            <button onClick={() => { if(holeIdx < 17) setHoleIdx(holeIdx+1); }} className="bg-white text-black flex-1 py-4 rounded-xl font-bold shadow-lg">
-                                Next Hole ➡️
-                            </button>
+                        {/* Tools */}
+                        <div className="w-full max-w-xs space-y-3">
+                             {caddyMsg && <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-xl text-sm text-yellow-800 font-medium text-center animate-pulse">💡 {caddyMsg}</div>}
+                             
+                             <div className="flex gap-3">
+                                 <button onClick={handleAskCaddy} disabled={loading} className="flex-1 bg-white border border-gray-200 py-3 rounded-xl font-bold shadow-sm text-gray-700 text-sm flex items-center justify-center gap-2 active:scale-95 transition">
+                                    <span>🤖</span> {loading ? "Thinking..." : "Caddy"}
+                                 </button>
+                                 <button onClick={()=>alert("📸 Captured! +50 Eco Points")} className="flex-1 bg-white border border-gray-200 py-3 rounded-xl font-bold shadow-sm text-gray-700 text-sm flex items-center justify-center gap-2 active:scale-95 transition">
+                                    <span>🐊</span> Log Sighting
+                                 </button>
+                             </div>
                         </div>
+                    </div>
+
+                    {/* Next Hole Action */}
+                    <div className="p-4 bg-white border-t border-gray-100">
+                        <button onClick={() => { if(currentHole<18) { setCurrentHole(c=>c+1); setCaddyMsg(""); } }} className="w-full bg-gray-900 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-black transition">
+                            {currentHole === 18 ? 'FINISH ROUND' : 'NEXT HOLE'}
+                        </button>
+                    </div>
+                </div>
+            );
+
+            // --- VIEW: SCORECARD ---
+            if (view === 'scorecard') return (
+                <div className="h-full flex flex-col bg-white">
+                    <div className="p-4 border-b flex justify-between items-center bg-gray-50 sticky top-0">
+                        <button onClick={() => setView('play')} className="font-bold text-gray-500 text-sm">Close</button>
+                        <h2 className="font-bold text-gray-800">Scorecard</h2>
+                        <span className="font-bold text-emerald-600 bg-emerald-100 px-2 py-1 rounded text-xs">{totalPoints} PTS</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto">
+                        <table className="w-full text-sm text-center border-collapse">
+                            <thead className="bg-gray-100 text-gray-500 font-bold text-xs uppercase tracking-wider sticky top-0">
+                                <tr><th className="py-3">Hole</th><th>Par</th><th>Score</th><th>Pts</th></tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {COURSE_DATA.map(h => {
+                                    const s = scores[h.hole];
+                                    const p = s ? getPoints(h,s) : '-';
+                                    const scoreClass = s ? (s < h.par ? 'birdie' : s > h.par ? 'bogey' : 'par') : '';
+                                    return (
+                                        <tr key={h.hole} className={h.hole === currentHole ? 'bg-yellow-50' : ''}>
+                                            <td className="py-3 font-bold text-gray-400">{h.hole}</td>
+                                            <td className="text-gray-400">{h.par}</td>
+                                            <td>{s ? <span className={`score-circle mx-auto ${scoreClass}`}>{s}</span> : '-'}</td>
+                                            <td className="font-bold text-emerald-600">{p}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             );
