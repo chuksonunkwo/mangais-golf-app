@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mangais Tournament</title>
+    <title>Mangais Tournament Pro</title>
     
     <script>
         window.onerror = function(msg, url, line) {
@@ -27,13 +27,23 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style> 
-        body { background-color: #f0fdf4; color: #064e3b; font-family: 'Inter', sans-serif; overflow: hidden; }
-        .score-circle { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 14px; border: 1px solid rgba(0,0,0,0.1); }
-        .birdie { background-color: #ef4444; color: white; border: none; } 
-        .par { background-color: #e5e7eb; color: #374151; }   
-        .bogey { background-color: #3b82f6; color: white; border: none; }   
-        .active-player { border: 2px solid #059669; background-color: #ecfdf5; transform: scale(1.05); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        body { background-color: #f8fafc; color: #0f172a; font-family: 'Inter', sans-serif; overflow: hidden; }
+        
+        /* Golf Scoring Colors */
+        .score-circle { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 800; font-size: 14px; border: 1px solid rgba(0,0,0,0.1); }
+        .birdie { background-color: #ef4444; color: white; border: none; } /* Red */
+        .par { background-color: #e2e8f0; color: #334155; }   /* Grey */
+        .bogey { background-color: #3b82f6; color: white; border: none; }   /* Blue */
+        
+        /* Animations & UI */
+        .active-player { border: 2px solid #059669; background-color: #ecfdf5; transform: scale(1.05); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); color: #065f46; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        .caddy-bubble { position: relative; background: #064e3b; color: white; border-radius: 16px; border-bottom-left-radius: 4px; padding: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .caddy-bubble::after { content: ''; position: absolute; bottom: 0; left: -8px; width: 0; height: 0; border: 8px solid transparent; border-right-color: #064e3b; border-bottom: 0; margin-bottom: 0; }
+        
+        /* Table Styles */
+        .lb-table th { font-size: 10px; text-transform: uppercase; color: #94a3b8; padding: 8px 4px; font-weight: 800; letter-spacing: 0.05em; }
+        .lb-table td { padding: 12px 4px; font-weight: 600; border-bottom: 1px solid #f1f5f9; }
     </style>
 </head>
 <body>
@@ -59,10 +69,10 @@
         const auth = getAuth(app);
         const googleProvider = new GoogleAuthProvider();
         
-        // RESTRICTED KEY
+        // YOUR API KEY HERE
         const API_KEY = "AIzaSyBYd4jCxHZohdIHdu6fCmlU7JFvD2wAL2c"; 
 
-        // --- 2. OFFICIAL DATA ---
+        // --- 2. OFFICIAL MANGAIS DATA ---
         const HOLES = [
             { number: 1, par: 5, si: 16, dist: 485, desc: "Opening Par 5. Wide fairway.", tip: "Green is accessible in three. Stay center." },
             { number: 2, par: 4, si: 14, dist: 365, desc: "Straightaway par 4.", tip: "Watch out for the cross bunkers." },
@@ -84,38 +94,41 @@
             { number: 18, par: 4, si: 15, dist: 370, desc: "Finishing hole with view of clubhouse.", tip: "Enjoy the walk. 🐊 Croc Risk!" }
         ];
 
-        // --- 3. AI CADDY ---
-        async function askCaddy(holeInfo, lang) {
+        // --- 3. INTELLIGENT AI CADDY ---
+        async function askCaddy(holeInfo, player, lang) {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`;
-            const prompt = `
-            You are "Mangais Caddy", an elite caddy at Mangais Golf Resort Angola.
-            Context: Hole ${holeInfo.number}, Par ${holeInfo.par}, ${holeInfo.dist}m.
-            Tip: ${holeInfo.tip}
             
-            Instructions:
-            1. Give strategic advice (Fade/Draw/Layup).
-            2. Warn about Crocodiles if on holes 5, 8, 13, or 18.
-            3. Mention the Kwanza River wind.
-            4. Keep it brief (under 20 words).
-            5. Reply in ${lang === 'en' ? 'English' : 'Portuguese'}.
+            // Logic to determine advice style based on handicap
+            let playStyle = "Balanced";
+            if (player.hcp < 10) playStyle = "Aggressive/Pro (Take risks)";
+            else if (player.hcp > 20) playStyle = "Safe/Conservative (Avoid hazards at all costs)";
+            
+            const prompt = `
+            Act as "Mangais Caddy". 
+            Current Player: ${player.name} (Handicap ${player.hcp}).
+            Play Style Advice Needed: ${playStyle}.
+            
+            Hole Details: Hole ${holeInfo.number}, Par ${holeInfo.par}, ${holeInfo.dist}m.
+            Key Features: ${holeInfo.tip}
+            
+            Task: Give 1 short sentence of advice (max 20 words).
+            - If HCP is high (>18), tell them to layup or aim away from trouble.
+            - If HCP is low (<10), suggest the birdie line.
+            - Mention Crocodiles if on Hole 5, 8, 13, 18.
+            - Language: ${lang === 'en' ? 'English' : 'Portuguese'}.
             `;
+            
             try {
                 const response = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
                 const data = await response.json();
                 return data.candidates[0].content.parts[0].text;
-            } catch (e) { return lang === 'en' ? "Driver down the middle." : "Driver no meio."; }
+            } catch (e) { return "Play it smart. Keep it on the fairway."; }
         }
 
         const useAuth = () => {
             const [user, setUser] = useState(null);
             useEffect(() => onAuthStateChanged(auth, setUser), []);
-            const loginGoogle = () => signInWithPopup(auth, googleProvider).catch(e => {
-                if(e.code === 'auth/unauthorized-domain') {
-                    alert("⚠️ Domain Error (Colab)\n\nPlease use 'Visitor Access' inside Colab.");
-                } else {
-                    alert(e.message);
-                }
-            });
+            const loginGoogle = () => signInWithPopup(auth, googleProvider).catch(e => alert(e.message));
             const loginGuest = () => signInAnonymously(auth).catch(e => alert(e.message));
             const logout = () => signOut(auth);
             return { user, loginGoogle, loginGuest, logout };
@@ -137,7 +150,6 @@
             const [setupName, setSetupName] = useState("");
             const [setupHcp, setSetupHcp] = useState(18);
 
-            // Init
             useEffect(() => { 
                 if (user && players.length === 0) {
                     setPlayers([{ id: 0, name: user.displayName ? user.displayName.split(' ')[0] : "You", hcp: 18, scores: {} }]);
@@ -149,7 +161,7 @@
             const activePlayer = players[activePlayerId] || players[0];
             const currentScore = activePlayer?.scores[currentHole] || holeInfo?.par || 4;
 
-            // --- SCORING ENGINE ---
+            // --- CALCULATION ENGINE ---
             const updateScore = (val) => {
                 const newPlayers = [...players];
                 const p = newPlayers[activePlayerId];
@@ -167,21 +179,22 @@
                 return Math.max(0, h.par - net + 2);
             };
 
-            // NEW: Helper to calculate Gross, Net, and Points for the Leaderboard
+            const getNetScore = (score, hcp, si) => {
+                if(!score) return 0;
+                let free = 0;
+                if (hcp >= si) free = 1;
+                if (hcp - 18 >= si) free = 2;
+                return Math.max(1, score - free);
+            };
+
             const getTotals = (p) => {
                 let gross = 0;
                 let net = 0;
                 let pts = 0;
                 Object.entries(p.scores).forEach(([hNum, score]) => {
                     const hole = HOLES.find(h => h.number == hNum);
-                    // Gross
                     gross += score;
-                    // Net Calculation
-                    let free = 0;
-                    if (p.hcp >= hole.si) free = 1;
-                    if (p.hcp - 18 >= hole.si) free = 2;
-                    net += Math.max(1, score - free);
-                    // Points
+                    net += getNetScore(score, p.hcp, hole.si);
                     pts += getPoints(hole, score, p.hcp);
                 });
                 return { gross, net, pts };
@@ -197,7 +210,8 @@
 
             const handleAskCaddy = async () => {
                 setLoading(true);
-                const advice = await askCaddy(holeInfo, lang);
+                // PASSING PLAYER CONTEXT FOR INTELLIGENCE
+                const advice = await askCaddy(holeInfo, activePlayer, lang);
                 setCaddyMsg(advice);
                 setLoading(false);
             };
@@ -206,14 +220,10 @@
                 if (currentHole < 18) {
                     setCurrentHole(c => c + 1);
                     setCaddyMsg("");
-                } else {
-                    // Logic for when they click "Next" on hole 18
-                    const confirm = window.confirm("You are on Hole 18. Finish round?");
-                    if(confirm) setView('leaderboard');
-                }
+                } 
+                // Note: No 'else' needed here because button is hidden on 18
             };
 
-            // NEW: Dedicated Sign & Finish function
             const confirmFinish = () => {
                 const confirm = window.confirm("✍️ Sign Scorecard & Finish Round?\n\nThis will lock your scores.");
                 if(confirm) {
@@ -239,7 +249,7 @@
             if (view === 'setup') return (
                 <div className="h-full flex flex-col bg-slate-50 p-6">
                     <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold text-slate-800">Setup Flight</h2>
+                        <h2 className="text-2xl font-bold text-slate-800">Flight Setup</h2>
                         <button onClick={() => setView('home')} className="text-slate-400 font-bold">Close</button>
                     </div>
                     
@@ -256,7 +266,7 @@
                     </div>
 
                     <div className="space-y-2 flex-1 overflow-y-auto">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase">Current Players ({players.length}/4)</h3>
+                        <h3 className="text-xs font-bold text-slate-400 uppercase">Current Flight ({players.length}/4)</h3>
                         {players.map((p, i) => (
                             <div key={i} className="flex justify-between bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                                 <span className="font-bold text-slate-800">{p.name}</span>
@@ -319,7 +329,7 @@
                     <div className="bg-white border-b border-slate-100 p-2 overflow-x-auto no-scrollbar flex gap-2 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.02)]">
                         {players.map((p, i) => (
                             <button key={i} onClick={() => setActivePlayerId(i)} 
-                                className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition flex items-center gap-2 ${activePlayerId === i ? 'active-player text-emerald-800' : 'bg-slate-50 text-slate-500 border border-slate-100'}`}>
+                                className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition flex items-center gap-2 ${activePlayerId === i ? 'active-player' : 'bg-slate-100 text-slate-400 border border-slate-100'}`}>
                                 {p.name}
                                 {activePlayerId === i && <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>}
                             </button>
@@ -343,85 +353,96 @@
                             </div>
                         </div>
 
-                        {/* AI CADDY */}
+                        {/* INTELLIGENT AI CADDY UI */}
                         <div className="w-full max-w-xs space-y-2">
                             {caddyMsg && (
-                                <div className="bg-emerald-900 text-white p-4 rounded-xl text-sm font-medium animate-in slide-in-from-bottom-2 shadow-lg border border-emerald-800/50">
-                                    <span className="text-emerald-300 font-bold text-xs uppercase block mb-1">Caddy Says:</span>
-                                    "{caddyMsg}"
+                                <div className="caddy-bubble animate-in slide-in-from-bottom-2">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <span className="text-emerald-200 font-bold text-[10px] uppercase">Tiger Strategy</span>
+                                        <span className="text-xs opacity-50">🤖</span>
+                                    </div>
+                                    <p className="text-sm font-medium leading-snug">"{caddyMsg}"</p>
                                 </div>
                             )}
-                            <button onClick={handleAskCaddy} disabled={loading} className="w-full py-4 bg-white border border-slate-200 rounded-2xl font-bold text-sm text-slate-700 shadow-sm flex items-center justify-center gap-2 active:scale-95 transition">
-                                <span>🤖</span> {loading ? "Thinking..." : (lang === 'en' ? "Ask Tiger Strategy" : "Pedir Estratégia")}
+                            <button onClick={handleAskCaddy} disabled={loading} className="w-full py-3 bg-white border border-slate-200 rounded-2xl font-bold text-sm text-slate-700 shadow-sm flex items-center justify-center gap-2 active:scale-95 transition">
+                                {loading ? <span className="animate-spin">⏳</span> : <span>🤖 Ask Caddy</span>}
                             </button>
                         </div>
                     </div>
 
-                    {/* FOOTER ACTIONS */}
-                    <div className="p-4 bg-white border-t border-slate-100 space-y-2">
-                        <button onClick={handleNextHole} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-black transition active:scale-95">
-                            {currentHole === 18 ? 'Review Card' : 'Next Hole ➡️'}
-                        </button>
-                        
-                        {/* SIGN & FINISH BUTTON (Newly Added) */}
-                        <button onClick={confirmFinish} className="w-full bg-emerald-50 text-emerald-800 border border-emerald-200 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-emerald-100 transition">
-                            <span>✍️</span> Sign & Finish Round
-                        </button>
+                    {/* FOOTER ACTIONS - FIXED */}
+                    <div className="p-4 bg-white border-t border-slate-100">
+                        {currentHole === 18 ? (
+                            <button onClick={confirmFinish} className="w-full bg-emerald-900 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-black transition active:scale-95 animate-pulse">
+                                ✍️ SIGN SCORECARD
+                            </button>
+                        ) : (
+                            <button onClick={handleNextHole} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-black transition active:scale-95">
+                                NEXT HOLE ➡️
+                            </button>
+                        )}
                     </div>
                 </div>
             );
 
             if (view === 'leaderboard') return (
                 <div className="h-full flex flex-col bg-white">
-                    <div className="bg-emerald-900 p-6 rounded-b-3xl shadow-lg shrink-0">
-                        <div className="flex justify-between items-center text-white mb-4">
+                    <div className="bg-emerald-900 p-6 rounded-b-3xl shadow-lg shrink-0 text-white">
+                        <div className="flex justify-between items-center mb-4">
                             <button onClick={() => setView('play')} className="text-emerald-200 hover:text-white"><span className="text-2xl">←</span></button>
-                            <h2 className="font-bold text-lg uppercase tracking-widest">Tournament Summary</h2>
+                            <h2 className="font-bold text-lg uppercase tracking-widest">Final Standings</h2>
                             <div className="w-6"></div>
                         </div>
                         
-                        {/* WINNER SPOTLIGHT (Newly Added) */}
+                        {/* WINNER SPOTLIGHT */}
                         {players.length > 0 && (() => {
-                            // Sort by Points High-to-Low
                             const sorted = [...players].sort((a,b) => getTotals(b).pts - getTotals(a).pts);
                             const winner = sorted[0];
                             const winStats = getTotals(winner);
                             return (
-                                <div className="text-center animate-pulse-slow">
-                                    <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center text-3xl mx-auto mb-3 border-4 border-emerald-800 shadow-xl">🏆</div>
-                                    <h3 className="text-2xl font-black text-white">{winner.name}</h3>
-                                    <div className="flex justify-center gap-4 mt-2 text-emerald-200 text-xs font-bold uppercase">
-                                        <div><span className="block text-xl text-white">{winStats.gross}</span>Gross</div>
-                                        <div className="border-l border-emerald-700 pl-4"><span className="block text-xl text-yellow-400">{winStats.pts}</span>Points</div>
+                                <div className="text-center">
+                                    <div className="w-20 h-20 bg-yellow-400 rounded-full flex items-center justify-center text-4xl mx-auto mb-3 border-4 border-emerald-800 shadow-xl">🏆</div>
+                                    <h3 className="text-3xl font-black">{winner.name}</h3>
+                                    <p className="text-emerald-300 text-xs font-bold uppercase mb-4">Tournament Champion</p>
+                                    <div className="inline-flex bg-emerald-800/50 rounded-lg p-2 gap-4 border border-emerald-700">
+                                        <div className="text-center"><span className="block text-xl font-bold">{winStats.gross}</span><span className="text-[9px] uppercase opacity-70">Gross</span></div>
+                                        <div className="text-center"><span className="block text-xl font-bold text-yellow-400">{winStats.pts}</span><span className="text-[9px] uppercase opacity-70 text-yellow-400">Pts</span></div>
                                     </div>
                                 </div>
                             );
                         })()}
                     </div>
 
-                    <div className="p-4 space-y-3 bg-slate-50 flex-1 overflow-y-auto">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase ml-1">Full Standings</h3>
+                    <div className="p-4 bg-slate-50 flex-1 overflow-y-auto">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase ml-1 mb-2">Detailed Scoreboard</h3>
                         
-                        {/* DETAILED TABLE (Updated to match RoundSummary logic) */}
+                        {/* TABLE HEADER */}
+                        <div className="grid grid-cols-[30px_1fr_40px_40px_40px] px-4 mb-1 text-[10px] font-bold text-slate-400 uppercase text-center">
+                            <span>#</span>
+                            <span className="text-left">Player</span>
+                            <span>Gro</span>
+                            <span>Net</span>
+                            <span>Pts</span>
+                        </div>
+
+                        {/* DETAILED TABLE */}
+                        <div className="space-y-2">
                         {players.sort((a,b) => getTotals(b).pts - getTotals(a).pts).map((p, i) => {
                             const stats = getTotals(p);
                             return (
-                                <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <span className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold ${i===0 ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100 text-slate-500'}`}>{i+1}</span>
-                                        <div>
-                                            <span className="block font-bold text-slate-800 text-sm">{p.name}</span>
-                                            <span className="text-[10px] text-slate-400">HCP {p.hcp}</span>
-                                        </div>
+                                <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-100 p-3 grid grid-cols-[30px_1fr_40px_40px_40px] items-center text-center">
+                                    <span className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold mx-auto ${i===0 ? 'bg-yellow-400 text-yellow-900' : 'bg-slate-100 text-slate-500'}`}>{i+1}</span>
+                                    <div className="text-left overflow-hidden">
+                                        <span className="block font-bold text-slate-800 text-sm truncate">{p.name}</span>
+                                        <span className="text-[9px] text-slate-400">HCP {p.hcp}</span>
                                     </div>
-                                    <div className="flex gap-4 text-right">
-                                        <div><span className="block text-sm font-bold text-slate-600">{stats.gross}</span><span className="text-[9px] text-slate-400 uppercase">Gross</span></div>
-                                        <div><span className="block text-sm font-bold text-slate-600">{stats.net}</span><span className="text-[9px] text-slate-400 uppercase">Net</span></div>
-                                        <div className="w-10"><span className="block text-lg font-black text-emerald-600">{stats.pts}</span><span className="text-[9px] text-emerald-600 uppercase">Pts</span></div>
-                                    </div>
+                                    <span className="text-sm font-bold text-slate-600">{stats.gross}</span>
+                                    <span className="text-sm font-bold text-slate-600">{stats.net}</span>
+                                    <span className="text-lg font-black text-emerald-600">{stats.pts}</span>
                                 </div>
                             );
                         })}
+                        </div>
                     </div>
                     
                     <div className="p-4 bg-white border-t border-slate-100">
