@@ -59,10 +59,10 @@
         const auth = getAuth(app);
         const googleProvider = new GoogleAuthProvider();
         
-        // UPDATE THIS WITH YOUR NEW RESTRICTED KEY
+        // REPLACE WITH YOUR NEW RESTRICTED KEY
         const API_KEY = "AIzaSyBYd4jCxHZohdIHdu6fCmlU7JFvD2wAL2c"; 
 
-        // --- 2. OFFICIAL DATA (From AI Studio Files) ---
+        // --- 2. OFFICIAL DATA ---
         const HOLES = [
             { number: 1, par: 5, si: 16, dist: 485, desc: "Opening Par 5. Wide fairway.", tip: "Green is accessible in three. Stay center." },
             { number: 2, par: 4, si: 14, dist: 365, desc: "Straightaway par 4.", tip: "Watch out for the cross bunkers." },
@@ -84,7 +84,7 @@
             { number: 18, par: 4, si: 15, dist: 370, desc: "Finishing hole with view of clubhouse.", tip: "Enjoy the walk. 🐊 Croc Risk!" }
         ];
 
-        // --- 3. AI CADDY LOGIC ---
+        // --- 3. AI CADDY ---
         async function askCaddy(holeInfo, lang) {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`;
             const prompt = `
@@ -127,7 +127,7 @@
             const [view, setView] = useState('auth'); 
             
             // --- TOURNAMENT STATE ---
-            const [players, setPlayers] = useState([]); // Array of {id, name, hcp, scores:{}}
+            const [players, setPlayers] = useState([]); 
             const [activePlayerId, setActivePlayerId] = useState(0); 
             const [currentHole, setCurrentHole] = useState(1);
             const [caddyMsg, setCaddyMsg] = useState("");
@@ -168,11 +168,25 @@
                 return Math.max(0, h.par - net + 2);
             };
 
-            const getTotalPoints = (p) => {
-                return Object.entries(p.scores).reduce((acc, [hNum, score]) => {
+            const getNetScore = (score, hcp, si) => {
+                if(!score) return 0;
+                let free = 0;
+                if (hcp >= si) free = 1;
+                if (hcp - 18 >= si) free = 2;
+                return Math.max(1, score - free);
+            };
+
+            const getTotals = (p) => {
+                let gross = 0;
+                let net = 0;
+                let pts = 0;
+                Object.entries(p.scores).forEach(([hNum, score]) => {
                     const hole = HOLES.find(h => h.number == hNum);
-                    return acc + getPoints(hole, score, p.hcp);
-                }, 0);
+                    gross += score;
+                    net += getNetScore(score, p.hcp, hole.si);
+                    pts += getPoints(hole, score, p.hcp);
+                });
+                return { gross, net, pts };
             };
 
             const addPlayer = () => {
@@ -190,14 +204,10 @@
                 setLoading(false);
             };
 
-            const handleNextHole = () => {
-                if (currentHole < 18) {
-                    setCurrentHole(c => c + 1);
-                    setCaddyMsg("");
-                } else {
-                    // FINISH ROUND LOGIC
+            const confirmFinish = () => {
+                const confirm = window.confirm("Are you sure you want to sign the scorecard and finish?");
+                if(confirm) {
                     setView('leaderboard');
-                    alert("Round Complete! 🏁\nCheck the Leaderboard for results.");
                 }
             };
 
@@ -337,41 +347,75 @@
                         </div>
                     </div>
 
-                    {/* FOOTER */}
-                    <div className="p-4 bg-white border-t border-slate-100">
-                        <button onClick={handleNextHole} className="w-full bg-emerald-900 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-black transition active:scale-95">
-                            {currentHole === 18 ? '🏁 FINISH ROUND' : 'NEXT HOLE ➡️'}
+                    {/* FOOTER ACTIONS */}
+                    <div className="p-4 bg-white border-t border-slate-100 space-y-2">
+                        <button onClick={() => { if(currentHole<18) { setCurrentHole(c=>c+1); setCaddyMsg(""); } }} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-black transition active:scale-95">
+                            {currentHole === 18 ? 'Review Card' : 'Next Hole ➡️'}
+                        </button>
+                        
+                        {/* THE MISSING CONFIRM BUTTON */}
+                        <button onClick={confirmFinish} className="w-full bg-emerald-50 text-emerald-800 border border-emerald-200 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-emerald-100 transition">
+                            <span>✍️</span> Sign & Finish Round
                         </button>
                     </div>
                 </div>
             );
 
+            // --- VIEW: LEADERBOARD / SUMMARY ---
             if (view === 'leaderboard') return (
                 <div className="h-full flex flex-col bg-white">
-                    <div className="p-4 border-b flex justify-between items-center bg-slate-50 sticky top-0 z-10">
-                        <button onClick={() => setView('play')} className="font-bold text-slate-500">Back</button>
-                        <h2 className="font-bold text-lg text-slate-800">Leaderboard</h2>
-                        <div className="w-8"></div>
-                    </div>
-                    <div className="p-4 space-y-3 bg-slate-50 flex-1 overflow-y-auto">
-                        {players.sort((a,b) => getTotalPoints(b) - getTotalPoints(a)).map((p, i) => (
-                            <div key={i} className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center border border-emerald-50">
-                                <div className="flex items-center gap-4">
-                                    <span className={`w-8 h-8 flex items-center justify-center rounded-full font-bold ${i===0 ? 'bg-yellow-400 text-yellow-900 shadow-sm' : 'bg-slate-100 text-slate-500'}`}>{i+1}</span>
-                                    <div>
-                                        <span className="block font-bold text-slate-800">{p.name}</span>
-                                        <span className="text-xs text-slate-400 font-medium">HCP {p.hcp}</span>
+                    <div className="bg-emerald-900 p-6 rounded-b-3xl shadow-lg shrink-0">
+                        <div className="flex justify-between items-center text-white mb-4">
+                            <button onClick={() => setView('play')} className="text-emerald-200 hover:text-white"><span className="text-2xl">←</span></button>
+                            <h2 className="font-bold text-lg uppercase tracking-widest">Tournament Summary</h2>
+                            <div className="w-6"></div>
+                        </div>
+                        
+                        {/* WINNER SPOTLIGHT */}
+                        {players.length > 0 && (() => {
+                            const sorted = [...players].sort((a,b) => getTotals(b).pts - getTotals(a).pts);
+                            const winner = sorted[0];
+                            const winStats = getTotals(winner);
+                            return (
+                                <div className="text-center">
+                                    <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center text-3xl mx-auto mb-3 border-4 border-emerald-800 shadow-xl">🏆</div>
+                                    <h3 className="text-2xl font-black text-white">{winner.name}</h3>
+                                    <div className="flex justify-center gap-4 mt-2 text-emerald-200 text-xs font-bold uppercase">
+                                        <div><span className="block text-xl text-white">{winStats.gross}</span>Gross</div>
+                                        <div className="border-l border-emerald-700 pl-4"><span className="block text-xl text-yellow-400">{winStats.pts}</span>Points</div>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <span className="block text-2xl font-black text-emerald-600">{getTotalPoints(p)}</span>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Points</span>
+                            );
+                        })()}
+                    </div>
+
+                    <div className="p-4 space-y-3 bg-slate-50 flex-1 overflow-y-auto">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase ml-1">Full Standings</h3>
+                        
+                        {/* DETAILED TABLE */}
+                        {players.sort((a,b) => getTotals(b).pts - getTotals(a).pts).map((p, i) => {
+                            const stats = getTotals(p);
+                            return (
+                                <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <span className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold ${i===0 ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100 text-slate-500'}`}>{i+1}</span>
+                                        <div>
+                                            <span className="block font-bold text-slate-800 text-sm">{p.name}</span>
+                                            <span className="text-[10px] text-slate-400">HCP {p.hcp}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4 text-right">
+                                        <div><span className="block text-sm font-bold text-slate-600">{stats.gross}</span><span className="text-[9px] text-slate-400 uppercase">Gross</span></div>
+                                        <div><span className="block text-sm font-bold text-slate-600">{stats.net}</span><span className="text-[9px] text-slate-400 uppercase">Net</span></div>
+                                        <div className="w-10"><span className="block text-lg font-black text-emerald-600">{stats.pts}</span><span className="text-[9px] text-emerald-600 uppercase">Pts</span></div>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                        <div className="text-center mt-8 text-xs text-slate-400">
-                            Stableford Scoring • Net Par = 2 Pts
-                        </div>
+                            );
+                        })}
+                    </div>
+                    
+                    <div className="p-4 bg-white border-t border-slate-100">
+                        <button onClick={() => setView('home')} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold shadow-lg">Back to Club 🏠</button>
                     </div>
                 </div>
             );
