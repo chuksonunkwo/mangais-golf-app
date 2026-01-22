@@ -1,3 +1,4 @@
+%%writefile index.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -116,8 +117,8 @@
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                                 <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide">Tournament Mode</span>
                             </div>
-                            <span className="block text-xl font-bold text-slate-800">Mangais Championship</span>
-                            <span className="text-xs text-slate-400">Multi-Flight • Live Scoring</span>
+                            <span className="block text-xl font-bold text-slate-800">Start New Game</span>
+                            <span className="text-xs text-slate-400">Setup Holes, Format & Players</span>
                         </div>
                         <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center border border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                             <Icon name="trophy" fill="currentColor" size={20} />
@@ -140,15 +141,17 @@
 
         // 2. WIZARD SETUP VIEW (New Flow)
         const SetupView = ({ setView, setPlayers, setGameFormat, setConfig }) => {
-            const [step, setStep] = useState(1);
+            const [step, setStep] = useState(1); // 1: Holes, 2: Format, 3: Mode, 4: Players
             const [holeSelection, setHoleSelection] = useState('18');
             const [mainFormat, setMainFormat] = useState('stroke');
             const [subFormat, setSubFormat] = useState('individual');
             const [flights, setFlights] = useState([[{id: 1, name: 'You', hcp: 18}]]);
 
+            // --- NAVIGATION HELPERS ---
             const nextStep = () => setStep(step + 1);
             const prevStep = () => setStep(step - 1);
 
+            // --- PLAYER MANAGEMENT ---
             const addPlayer = (fIdx) => {
                 if (flights[fIdx].length >= 4) return;
                 const newF = [...flights];
@@ -166,12 +169,12 @@
                 const all = [];
                 flights.forEach((f, i) => f.forEach(p => all.push({ ...p, flight: i+1, scores: {} })));
                 setPlayers(all);
-                setGameFormat(mainFormat); 
-                setConfig({ holeSelection, subFormat });
+                setGameFormat(mainFormat); // Store for scoring logic
+                setConfig({ holeSelection, subFormat }); // Store for display
                 setView('play');
             };
 
-            // RENDER STEPS
+            // --- RENDER STEPS ---
             const renderStep1 = () => (
                 <div className="space-y-3 animate-slide-up">
                     <h3 className="text-emerald-800 font-bold mb-4 uppercase tracking-widest text-xs">Step 1: Select Holes</h3>
@@ -270,7 +273,7 @@
             );
         };
 
-        // 3. GAME VIEW (CRASH FIXED)
+        // 3. GAME VIEW (Safe + Config Display)
         const GameView = ({ players, setPlayers, setView, gameFormat, holeIdx, setHoleIdx, config }) => {
             const [activePlayerId, setActivePlayerId] = useState(0); 
             const [isConfirmed, setIsConfirmed] = useState(false);
@@ -279,29 +282,13 @@
             
             const hole = HOLES[holeIdx];
             
-            // --- CRASH GUARD 🛑 (The Fix) ---
-            if (!players || players.length === 0) {
-                return (
-                    <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 p-6 text-center safe-pb page-enter">
-                        <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-4 text-3xl">⚠️</div>
-                        <h2 className="text-xl font-bold text-slate-800 mb-2">Game Not Started</h2>
-                        <p className="text-sm text-slate-500 mb-6">Please set up your players first.</p>
-                        <button onClick={()=>setView('setup')} className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg">Go to Setup</button>
-                    </div>
-                );
-            }
-            // ------------------------------
-
+            // --- CRASH GUARD ---
+            if (!players || players.length === 0) return <div className="p-10 text-center text-slate-500">Loading Players...<br/><button onClick={()=>setView('setup')} className="mt-4 text-emerald-600 font-bold underline">Go to Setup</button></div>;
+            
             const activePlayer = players[activePlayerId] || players[0];
-            // Safe Score Access
-            const score = activePlayer?.scores?.[hole.number] ?? hole.par;
+            const score = activePlayer.scores[hole.number] || hole.par;
 
             useEffect(() => setIsConfirmed(false), [activePlayerId, holeIdx]);
-            useEffect(() => {
-                if (activePlayerId > players.length - 1) {
-                    setActivePlayerId(0);
-                }
-            }, [activePlayerId, players.length]);
 
             const updateScore = (val) => {
                 setIsConfirmed(false);
@@ -309,7 +296,7 @@
                     if (idx !== activePlayerId) return p;
                     return {
                         ...p,
-                        scores: { ...(p.scores || {}), [hole.number]: Math.max(1, score + val) }
+                        scores: { ...p.scores, [hole.number]: Math.max(1, score + val) }
                     };
                 });
                 setPlayers(newPlayers);
@@ -332,9 +319,7 @@
             };
 
             const mainDisplay = score; 
-            const subDisplay = gameFormat === 'stableford'
-                ? `${getPoints(score)} PTS`
-                : `Net ${score - (activePlayer.hcp >= hole.si ? 1 : 0)}`;
+            const subDisplay = gameFormat === 'stableford' ? `${getPoints(score)} PTS` : `Net ${score - (activePlayer.hcp >= hole.si ? 1 : 0)}`;
 
             return (
                 <div className="flex-1 flex flex-col h-full bg-slate-50 relative safe-pb page-enter">
@@ -366,7 +351,7 @@
                     <div className="flex overflow-x-auto px-4 py-3 gap-2 bg-white border-b border-slate-100 no-scrollbar">
                         {players.map((p, i) => (
                             <button key={i} onClick={()=>setActivePlayerId(i)} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${activePlayerId === i ? 'bg-emerald-900 text-white shadow-md' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>
-                                {(p.name || 'Player').split(' ')[0]}
+                                {p.name.split(' ')[0]}
                             </button>
                         ))}
                     </div>
@@ -408,11 +393,8 @@
             const calcStats = (p) => {
                 let gross = 0, pts = 0;
                 HOLES.forEach(h => {
-                    const s = p.scores?.[h.number];
-                    if (s) {
-                        gross += s;
-                        pts += getPoints(s, p.hcp, h.si, h.par);
-                    }
+                    const s = p.scores[h.number];
+                    if(s) { gross += s; pts += getPoints(s, p.hcp, h.si, h.par); }
                 });
                 return { gross, pts };
             }
@@ -444,7 +426,7 @@
                                     <div className="p-4 flex items-center justify-between cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : p.id)}>
                                         <div className="flex items-center gap-4">
                                             <div className="w-8 h-8 flex items-center justify-center rounded-full font-bold text-sm bg-slate-100 text-slate-500">{i+1}</div>
-                                            <div><h4 className="font-bold text-slate-800">{p.name || 'Player'}</h4><p className="text-xs text-slate-400">Flight {p.flight} • HCP {p.hcp}</p></div>
+                                            <div><h4 className="font-bold text-slate-800">{p.name}</h4><p className="text-xs text-slate-400">Flight {p.flight} • HCP {p.hcp}</p></div>
                                         </div>
                                         <div className="text-right">
                                             <span className="block text-2xl font-black text-emerald-700">{gameFormat==='stableford' ? stats.pts : stats.gross}</span>
@@ -457,7 +439,7 @@
                                                 {HOLES.map(h => (
                                                     <div key={h.number} className="bg-white rounded p-1 border border-slate-100">
                                                         <div className="text-[8px] font-bold text-slate-400">{h.number}</div>
-                                                        <div className="font-bold text-sm text-slate-800">{p.scores?.[h.number] || '-'}</div>
+                                                        <div className="font-bold text-sm text-slate-800">{p.scores[h.number] || '-'}</div>
                                                     </div>
                                                 ))}
                                             </div>
@@ -548,18 +530,6 @@
 
             useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-            const getSystemPrompt = () => {
-                const currentHole = HOLES[holeIdx];
-                return `
-                  You are "Mangais Caddy", an elite caddy at Mangais Golf Resort Angola.
-                  - Player is on Hole ${currentHole.number}
-                  - Par: ${currentHole.par}, Distance: ${currentHole.dist}m
-                  - Pro Tip: ${currentHole.tip}
-                  - Hazards: ${currentHole.hazard ? 'CROCODILE DANGER!' : 'Standard'}
-                  - Keep answers short (under 40 words).
-                `;
-            };
-
             const ask = async (query) => {
                 const userText = query || input;
                 if(!userText.trim()) return;
@@ -568,13 +538,10 @@
                 setLoading(true);
 
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`;
-                
+                const prompt = `You are Mangais Caddy. Warn about crocodiles on holes 5, 8, 13, 18. Keep it brief.`;
+
                 try {
-                    const res = await fetch(url, { 
-                        method: 'POST', 
-                        headers: {'Content-Type': 'application/json'}, 
-                        body: JSON.stringify({ contents: [{ parts: [{ text: getSystemPrompt() + "\n\nUser: " + userText }] }] }) 
-                    });
+                    const res = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt + "\n\nUser: " + userText }] }] }) });
                     const data = await res.json();
                     if (data.candidates) {
                         setStatus("online");
