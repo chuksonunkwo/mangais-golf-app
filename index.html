@@ -59,7 +59,7 @@
         const auth = getAuth(app);
         const googleProvider = new GoogleAuthProvider();
         
-        // REPLACE WITH YOUR NEW RESTRICTED KEY
+        // RESTRICTED KEY
         const API_KEY = "AIzaSyBYd4jCxHZohdIHdu6fCmlU7JFvD2wAL2c"; 
 
         // --- 2. OFFICIAL DATA ---
@@ -109,7 +109,6 @@
         const useAuth = () => {
             const [user, setUser] = useState(null);
             useEffect(() => onAuthStateChanged(auth, setUser), []);
-            
             const loginGoogle = () => signInWithPopup(auth, googleProvider).catch(e => {
                 if(e.code === 'auth/unauthorized-domain') {
                     alert("⚠️ Domain Error (Colab)\n\nPlease use 'Visitor Access' inside Colab.");
@@ -168,22 +167,21 @@
                 return Math.max(0, h.par - net + 2);
             };
 
-            const getNetScore = (score, hcp, si) => {
-                if(!score) return 0;
-                let free = 0;
-                if (hcp >= si) free = 1;
-                if (hcp - 18 >= si) free = 2;
-                return Math.max(1, score - free);
-            };
-
+            // NEW: Helper to calculate Gross, Net, and Points for the Leaderboard
             const getTotals = (p) => {
                 let gross = 0;
                 let net = 0;
                 let pts = 0;
                 Object.entries(p.scores).forEach(([hNum, score]) => {
                     const hole = HOLES.find(h => h.number == hNum);
+                    // Gross
                     gross += score;
-                    net += getNetScore(score, p.hcp, hole.si);
+                    // Net Calculation
+                    let free = 0;
+                    if (p.hcp >= hole.si) free = 1;
+                    if (p.hcp - 18 >= hole.si) free = 2;
+                    net += Math.max(1, score - free);
+                    // Points
                     pts += getPoints(hole, score, p.hcp);
                 });
                 return { gross, net, pts };
@@ -204,8 +202,20 @@
                 setLoading(false);
             };
 
+            const handleNextHole = () => {
+                if (currentHole < 18) {
+                    setCurrentHole(c => c + 1);
+                    setCaddyMsg("");
+                } else {
+                    // Logic for when they click "Next" on hole 18
+                    const confirm = window.confirm("You are on Hole 18. Finish round?");
+                    if(confirm) setView('leaderboard');
+                }
+            };
+
+            // NEW: Dedicated Sign & Finish function
             const confirmFinish = () => {
-                const confirm = window.confirm("Are you sure you want to sign the scorecard and finish?");
+                const confirm = window.confirm("✍️ Sign Scorecard & Finish Round?\n\nThis will lock your scores.");
                 if(confirm) {
                     setView('leaderboard');
                 }
@@ -349,11 +359,11 @@
 
                     {/* FOOTER ACTIONS */}
                     <div className="p-4 bg-white border-t border-slate-100 space-y-2">
-                        <button onClick={() => { if(currentHole<18) { setCurrentHole(c=>c+1); setCaddyMsg(""); } }} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-black transition active:scale-95">
+                        <button onClick={handleNextHole} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-black transition active:scale-95">
                             {currentHole === 18 ? 'Review Card' : 'Next Hole ➡️'}
                         </button>
                         
-                        {/* THE MISSING CONFIRM BUTTON */}
+                        {/* SIGN & FINISH BUTTON (Newly Added) */}
                         <button onClick={confirmFinish} className="w-full bg-emerald-50 text-emerald-800 border border-emerald-200 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-emerald-100 transition">
                             <span>✍️</span> Sign & Finish Round
                         </button>
@@ -361,7 +371,6 @@
                 </div>
             );
 
-            // --- VIEW: LEADERBOARD / SUMMARY ---
             if (view === 'leaderboard') return (
                 <div className="h-full flex flex-col bg-white">
                     <div className="bg-emerald-900 p-6 rounded-b-3xl shadow-lg shrink-0">
@@ -371,13 +380,14 @@
                             <div className="w-6"></div>
                         </div>
                         
-                        {/* WINNER SPOTLIGHT */}
+                        {/* WINNER SPOTLIGHT (Newly Added) */}
                         {players.length > 0 && (() => {
+                            // Sort by Points High-to-Low
                             const sorted = [...players].sort((a,b) => getTotals(b).pts - getTotals(a).pts);
                             const winner = sorted[0];
                             const winStats = getTotals(winner);
                             return (
-                                <div className="text-center">
+                                <div className="text-center animate-pulse-slow">
                                     <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center text-3xl mx-auto mb-3 border-4 border-emerald-800 shadow-xl">🏆</div>
                                     <h3 className="text-2xl font-black text-white">{winner.name}</h3>
                                     <div className="flex justify-center gap-4 mt-2 text-emerald-200 text-xs font-bold uppercase">
@@ -392,7 +402,7 @@
                     <div className="p-4 space-y-3 bg-slate-50 flex-1 overflow-y-auto">
                         <h3 className="text-xs font-bold text-slate-400 uppercase ml-1">Full Standings</h3>
                         
-                        {/* DETAILED TABLE */}
+                        {/* DETAILED TABLE (Updated to match RoundSummary logic) */}
                         {players.sort((a,b) => getTotals(b).pts - getTotals(a).pts).map((p, i) => {
                             const stats = getTotals(p);
                             return (
