@@ -294,11 +294,14 @@
 
             const activePlayer = players[activePlayerId] || players[0];
             // Safe Score Access
-            const score = (activePlayer.scores && activePlayer.scores[hole.number]) 
-                          ? activePlayer.scores[hole.number] 
-                          : hole.par;
+            const score = activePlayer?.scores?.[hole.number] ?? hole.par;
 
             useEffect(() => setIsConfirmed(false), [activePlayerId, holeIdx]);
+            useEffect(() => {
+                if (activePlayerId > players.length - 1) {
+                    setActivePlayerId(0);
+                }
+            }, [activePlayerId, players.length]);
 
             const updateScore = (val) => {
                 setIsConfirmed(false);
@@ -306,7 +309,7 @@
                     if (idx !== activePlayerId) return p;
                     return {
                         ...p,
-                        scores: { ...p.scores, [hole.number]: Math.max(1, score + val) }
+                        scores: { ...(p.scores || {}), [hole.number]: Math.max(1, score + val) }
                     };
                 });
                 setPlayers(newPlayers);
@@ -329,7 +332,9 @@
             };
 
             const mainDisplay = score; 
-            const subDisplay = gameFormat === 'stableford' ? `${getPoints(score)} PTS` : `Net ${score - (activePlayer.hcp >= hole.si ? 1 : 0)}`;
+            const subDisplay = gameFormat === 'stableford'
+                ? `${getPoints(score)} PTS`
+                : `Net ${score - (activePlayer.hcp >= hole.si ? 1 : 0)}`;
 
             return (
                 <div className="flex-1 flex flex-col h-full bg-slate-50 relative safe-pb page-enter">
@@ -361,7 +366,7 @@
                     <div className="flex overflow-x-auto px-4 py-3 gap-2 bg-white border-b border-slate-100 no-scrollbar">
                         {players.map((p, i) => (
                             <button key={i} onClick={()=>setActivePlayerId(i)} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${activePlayerId === i ? 'bg-emerald-900 text-white shadow-md' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>
-                                {p.name.split(' ')[0]}
+                                {(p.name || 'Player').split(' ')[0]}
                             </button>
                         ))}
                     </div>
@@ -403,8 +408,11 @@
             const calcStats = (p) => {
                 let gross = 0, pts = 0;
                 HOLES.forEach(h => {
-                    const s = p.scores[h.number];
-                    if(s) { gross += s; pts += getPoints(s, p.hcp, h.si, h.par); }
+                    const s = p.scores?.[h.number];
+                    if (s) {
+                        gross += s;
+                        pts += getPoints(s, p.hcp, h.si, h.par);
+                    }
                 });
                 return { gross, pts };
             }
@@ -436,7 +444,7 @@
                                     <div className="p-4 flex items-center justify-between cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : p.id)}>
                                         <div className="flex items-center gap-4">
                                             <div className="w-8 h-8 flex items-center justify-center rounded-full font-bold text-sm bg-slate-100 text-slate-500">{i+1}</div>
-                                            <div><h4 className="font-bold text-slate-800">{p.name}</h4><p className="text-xs text-slate-400">Flight {p.flight} • HCP {p.hcp}</p></div>
+                                            <div><h4 className="font-bold text-slate-800">{p.name || 'Player'}</h4><p className="text-xs text-slate-400">Flight {p.flight} • HCP {p.hcp}</p></div>
                                         </div>
                                         <div className="text-right">
                                             <span className="block text-2xl font-black text-emerald-700">{gameFormat==='stableford' ? stats.pts : stats.gross}</span>
@@ -449,7 +457,7 @@
                                                 {HOLES.map(h => (
                                                     <div key={h.number} className="bg-white rounded p-1 border border-slate-100">
                                                         <div className="text-[8px] font-bold text-slate-400">{h.number}</div>
-                                                        <div className="font-bold text-sm text-slate-800">{p.scores[h.number] || '-'}</div>
+                                                        <div className="font-bold text-sm text-slate-800">{p.scores?.[h.number] || '-'}</div>
                                                     </div>
                                                 ))}
                                             </div>
