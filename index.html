@@ -27,29 +27,26 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style> 
-        body { background-color: #f8fafc; color: #0f172a; font-family: 'Inter', sans-serif; overflow: hidden; }
+        /* FIX 1: Prevent scrolling on body to handle mobile heights better */
+        body { background-color: #f8fafc; color: #0f172a; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
         
-        /* Golf UI */
         .score-circle { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 800; font-size: 15px; border: 1px solid rgba(0,0,0,0.1); }
         .birdie { background-color: #ef4444; color: white; border: none; } 
         .par { background-color: #e2e8f0; color: #334155; }   
         .bogey { background-color: #3b82f6; color: white; border: none; }   
         
-        /* Interactive Elements */
         .active-player { border: 2px solid #059669; background-color: #ecfdf5; transform: scale(1.05); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); color: #065f46; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        /* Caddy Bubble */
         .caddy-bubble { position: relative; background: #064e3b; color: white; border-radius: 16px; border-bottom-left-radius: 4px; padding: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .caddy-bubble::after { content: ''; position: absolute; bottom: 0; left: -8px; width: 0; height: 0; border: 8px solid transparent; border-right-color: #064e3b; border-bottom: 0; margin-bottom: 0; }
         
-        /* Animations */
         @keyframes pulse-soft { 0% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(5, 150, 105, 0); } 100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0); } }
         .btn-pulse { animation: pulse-soft 2s infinite; }
     </style>
 </head>
 <body>
-    <div id="root" class="h-screen w-full flex flex-col max-w-md mx-auto bg-white shadow-2xl overflow-hidden"></div>
+    <div id="root" class="h-full w-full"></div>
 
     <script type="text/babel" data-type="module">
         import React, { useState, useEffect } from 'react';
@@ -57,7 +54,6 @@
         import { initializeApp } from 'firebase/app';
         import { getAuth, signInAnonymously, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
 
-        // --- 1. CONFIGURATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyDSS05uLPrAKyPt6yBrNt1-xyWmHpJ0L-w",
             authDomain: "mangais-golf.firebaseapp.com",
@@ -72,7 +68,6 @@
         const googleProvider = new GoogleAuthProvider();
         const API_KEY = "AIzaSyBYd4jCxHZohdIHdu6fCmlU7JFvD2wAL2c"; 
 
-        // --- 2. OFFICIAL DATA ---
         const HOLES = [
             { number: 1, par: 5, si: 16, dist: 485, desc: "Opening Par 5.", tip: "Green accessible in 3. Stay center." },
             { number: 2, par: 4, si: 14, dist: 365, desc: "Straight Par 4.", tip: "Watch out for cross bunkers." },
@@ -94,15 +89,10 @@
             { number: 18, par: 4, si: 15, dist: 370, desc: "Home Hole.", tip: "Enjoy the walk. 🐊 Croc Risk!" }
         ];
 
-        // --- 3. AI CADDY ---
         async function askCaddy(holeInfo, player, lang) {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`;
             let playStyle = player.hcp < 10 ? "Aggressive (Go for birdie)" : player.hcp > 20 ? "Safe (Avoid hazards)" : "Balanced";
-            
-            const prompt = `Act as Mangais Caddy. Player: ${player.name} (HCP ${player.hcp}). Style: ${playStyle}.
-            Hole ${holeInfo.number} (${holeInfo.dist}m, Par ${holeInfo.par}). Tip: ${holeInfo.tip}.
-            Give 1 sentence of strategic advice. Mention hazards/wind. Lang: ${lang}.`;
-            
+            const prompt = `Act as Mangais Caddy. Player: ${player.name} (HCP ${player.hcp}). Style: ${playStyle}. Hole ${holeInfo.number} (${holeInfo.dist}m, Par ${holeInfo.par}). Tip: ${holeInfo.tip}. Give 1 sentence of strategic advice. Mention hazards/wind. Lang: ${lang}.`;
             try {
                 const response = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
                 const data = await response.json();
@@ -128,8 +118,6 @@
             const [caddyMsg, setCaddyMsg] = useState("");
             const [loading, setLoading] = useState(false);
             const [lang, setLang] = useState('en');
-            
-            // Setup
             const [setupName, setSetupName] = useState("");
             const [setupHcp, setSetupHcp] = useState(18);
 
@@ -141,21 +129,23 @@
             }, [user]);
 
             const holeInfo = HOLES.find(h => h.number === currentHole) || HOLES[0];
-            // CRITICAL FIX: Ensure activePlayer exists
             const activePlayer = players[activePlayerId] || players[0]; 
             const currentScore = activePlayer?.scores[currentHole] || holeInfo.par;
 
-            // --- ENGINE ---
+            // --- FIX 2: STATE IMMUTABILITY (Prevents "Missing Breakdown" Issue) ---
             const updateScore = (val) => {
-                const newPlayers = [...players]; // Copy array
-                const p = { ...newPlayers[activePlayerId] }; // Copy player object
-                p.scores = { ...p.scores }; // Copy scores object
-                
-                const oldScore = p.scores[currentHole] || holeInfo.par;
-                p.scores[currentHole] = Math.max(1, oldScore + val);
-                
-                newPlayers[activePlayerId] = p; // Update array
-                setPlayers(newPlayers);
+                setPlayers(prevPlayers => {
+                    const newPlayers = [...prevPlayers];
+                    // Create a Deep Copy of the active player to ensure React detects the change
+                    const updatedPlayer = { ...newPlayers[activePlayerId] };
+                    updatedPlayer.scores = { ...updatedPlayer.scores };
+                    
+                    const oldScore = updatedPlayer.scores[currentHole] || holeInfo.par;
+                    updatedPlayer.scores[currentHole] = Math.max(1, oldScore + val);
+                    
+                    newPlayers[activePlayerId] = updatedPlayer;
+                    return newPlayers;
+                });
             };
 
             const getPoints = (h, score, hcp) => {
@@ -198,6 +188,7 @@
 
             // --- VIEWS ---
             if (!user) return (
+                // FIX 1: Use h-[100dvh] for mobile browsers
                 <div className="h-[100dvh] flex flex-col items-center justify-center p-8 bg-emerald-900 text-white bg-[url('https://picsum.photos/800/1200?random=golf')] bg-cover bg-blend-overlay">
                     <div className="text-6xl mb-4 animate-bounce">🏆</div>
                     <h1 className="text-4xl font-black mb-2">MANGAIS</h1>
