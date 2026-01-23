@@ -1,4 +1,3 @@
-%%writefile index.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mangais Tournament Pro</title>
     
-    <script src="https://unpkg.com/lucide@latest"></script>
-    
+    <script>
+        window.onerror = function(msg, url, line) {
+            document.body.innerHTML = '<div style="color:white; background:red; padding:20px; font-family:sans-serif;"><h3>⚠️ App Error</h3><p>' + msg + '</p><p>Line: ' + line + '</p></div>';
+        };
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     
     <script type="importmap">
     {
@@ -25,28 +27,37 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style> 
-        body { background-color: #f1f5f9; color: #0f172a; font-family: 'Inter', sans-serif; overflow: hidden; }
+        body { background-color: #f8fafc; color: #0f172a; font-family: 'Inter', sans-serif; overflow: hidden; }
+        
+        /* Golf UI */
+        .score-circle { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 800; font-size: 15px; border: 1px solid rgba(0,0,0,0.1); }
+        .birdie { background-color: #ef4444; color: white; border: none; } 
+        .par { background-color: #e2e8f0; color: #334155; }   
+        .bogey { background-color: #3b82f6; color: white; border: none; }   
+        
+        /* Interactive Elements */
+        .active-player { border: 2px solid #059669; background-color: #ecfdf5; transform: scale(1.05); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); color: #065f46; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .safe-pb { padding-bottom: 90px; }
-        .page-enter { animation: fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .chat-bubble { max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.5; margin-bottom: 12px; word-wrap: break-word; }
-        .user-bubble { background-color: #064e3b; color: white; border-bottom-right-radius: 4px; align-self: flex-end; margin-left: auto; }
-        .ai-bubble { background-color: white; border: 1px solid #e2e8f0; color: #1e293b; border-bottom-left-radius: 4px; align-self: flex-start; }
+        
+        /* Caddy Bubble */
+        .caddy-bubble { position: relative; background: #064e3b; color: white; border-radius: 16px; border-bottom-left-radius: 4px; padding: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .caddy-bubble::after { content: ''; position: absolute; bottom: 0; left: -8px; width: 0; height: 0; border: 8px solid transparent; border-right-color: #064e3b; border-bottom: 0; margin-bottom: 0; }
+        
+        /* Animations */
+        @keyframes pulse-soft { 0% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(5, 150, 105, 0); } 100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0); } }
+        .btn-pulse { animation: pulse-soft 2s infinite; }
     </style>
 </head>
 <body>
-    <div id="root" class="h-screen w-full flex flex-col max-w-md mx-auto bg-slate-50 shadow-2xl overflow-hidden relative"></div>
+    <div id="root" class="h-screen w-full flex flex-col max-w-md mx-auto bg-white shadow-2xl overflow-hidden"></div>
 
     <script type="text/babel" data-type="module">
-        import React, { useState, useEffect, useRef } from 'react';
+        import React, { useState, useEffect } from 'react';
         import { createRoot } from 'react-dom/client';
         import { initializeApp } from 'firebase/app';
         import { getAuth, signInAnonymously, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
 
-        // --- CONFIG ---
+        // --- 1. CONFIGURATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyDSS05uLPrAKyPt6yBrNt1-xyWmHpJ0L-w",
             authDomain: "mangais-golf.firebaseapp.com",
@@ -59,580 +70,319 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const googleProvider = new GoogleAuthProvider();
-        const API_KEY = "AIzaSyDwYYX11Hpk8zlR2F4FUm83CmtZeKpb4o8"; 
+        const API_KEY = "AIzaSyBYd4jCxHZohdIHdu6fCmlU7JFvD2wAL2c"; 
 
-        // --- DATA ---
+        // --- 2. OFFICIAL DATA ---
         const HOLES = [
-            { number: 1, par: 5, si: 16, dist: 485, tip: "Wide fairway. Green accessible in 3." },
-            { number: 2, par: 4, si: 14, dist: 365, tip: "Avoid cross bunkers." },
-            { number: 3, par: 4, si: 8, dist: 390, tip: "Play left side." },
-            { number: 4, par: 3, si: 12, dist: 145, tip: "Watch the wind." },
-            { number: 5, par: 5, si: 2, dist: 520, tip: "Hardest front hole.", hazard: "croc" },
-            { number: 6, par: 4, si: 18, dist: 355, tip: "Birdie chance." },
-            { number: 7, par: 4, si: 10, dist: 375, tip: "Accuracy over power." },
-            { number: 8, par: 3, si: 6, dist: 175, tip: "Over wetland. Club up.", hazard: "croc" },
-            { number: 9, par: 4, si: 4, dist: 400, tip: "Avoid water right." },
-            { number: 10, par: 4, si: 3, dist: 410, tip: "Long drive needed." },
-            { number: 11, par: 3, si: 11, dist: 160, tip: "Avoid bunkers." },
-            { number: 12, par: 5, si: 13, dist: 490, tip: "Go for green in 2?" },
-            { number: 13, par: 4, si: 9, dist: 385, tip: "Keep left.", hazard: "croc" },
-            { number: 14, par: 4, si: 7, dist: 395, tip: "Precision key." },
-            { number: 15, par: 3, si: 17, dist: 135, tip: "Don't go long." },
-            { number: 16, par: 4, si: 5, dist: 405, tip: "Two strong shots." },
-            { number: 17, par: 5, si: 1, dist: 540, tip: "Play safe for Par." },
-            { number: 18, par: 4, si: 15, dist: 370, tip: "Enjoy the walk.", hazard: "croc" }
+            { number: 1, par: 5, si: 16, dist: 485, desc: "Opening Par 5.", tip: "Green accessible in 3. Stay center." },
+            { number: 2, par: 4, si: 14, dist: 365, desc: "Straight Par 4.", tip: "Watch out for cross bunkers." },
+            { number: 3, par: 4, si: 8, dist: 390, desc: "Slight Dogleg.", tip: "Left side opens up the green." },
+            { number: 4, par: 3, si: 12, dist: 145, desc: "Short Par 3.", tip: "Club selection key due to wind." },
+            { number: 5, par: 5, si: 2, dist: 520, desc: "Dogleg Left.", tip: "Hardest front hole. 🐊 Croc Risk!" },
+            { number: 6, par: 4, si: 18, dist: 355, desc: "Easiest Hole.", tip: "Great birdie opportunity." },
+            { number: 7, par: 4, si: 10, dist: 375, desc: "Tight Drive.", tip: "Accuracy over distance here." },
+            { number: 8, par: 3, si: 6, dist: 175, desc: "Over Wetland.", tip: "Check wind carefully. 🐊 Croc Risk!" },
+            { number: 9, par: 4, si: 4, dist: 400, desc: "Long Finish.", tip: "Avoid water on the right." },
+            { number: 10, par: 4, si: 3, dist: 410, desc: "Tough Start.", tip: "Long drive required." },
+            { number: 11, par: 3, si: 11, dist: 160, desc: "Mid-length.", tip: "Avoid the greenside bunkers." },
+            { number: 12, par: 5, si: 13, dist: 490, desc: "Recovery Chance.", tip: "Go for green in 2 if confident." },
+            { number: 13, par: 4, si: 9, dist: 385, desc: "Dogleg Right.", tip: "Keep left off tee. 🐊 Croc Risk!" },
+            { number: 14, par: 4, si: 7, dist: 395, desc: "Precision.", tip: "Fairway center is the goal." },
+            { number: 15, par: 3, si: 17, dist: 135, desc: "Shortest Hole.", tip: "Don't go long." },
+            { number: 16, par: 4, si: 5, dist: 405, desc: "Long Par 4.", tip: "Requires two strong shots." },
+            { number: 17, par: 5, si: 1, dist: 540, desc: "Index 1.", tip: "Play safe for Par. Avoid big numbers." },
+            { number: 18, par: 4, si: 15, dist: 370, desc: "Home Hole.", tip: "Enjoy the walk. 🐊 Croc Risk!" }
         ];
 
-        // --- ICONS COMPONENT ---
-        const Icon = ({ name, size = 20, className = "" }) => {
-            useEffect(() => { lucide.createIcons(); }, [name]); 
-            return <i data-lucide={name} width={size} height={size} className={className}></i>;
+        // --- 3. AI CADDY ---
+        async function askCaddy(holeInfo, player, lang) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`;
+            let playStyle = player.hcp < 10 ? "Aggressive (Go for birdie)" : player.hcp > 20 ? "Safe (Avoid hazards)" : "Balanced";
+            
+            const prompt = `Act as Mangais Caddy. Player: ${player.name} (HCP ${player.hcp}). Style: ${playStyle}.
+            Hole ${holeInfo.number} (${holeInfo.dist}m, Par ${holeInfo.par}). Tip: ${holeInfo.tip}.
+            Give 1 sentence of strategic advice. Mention hazards/wind. Lang: ${lang}.`;
+            
+            try {
+                const response = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+                const data = await response.json();
+                return data.candidates[0].content.parts[0].text;
+            } catch (e) { return "Play it smart. Keep it on the fairway."; }
+        }
+
+        const useAuth = () => {
+            const [user, setUser] = useState(null);
+            useEffect(() => onAuthStateChanged(auth, setUser), []);
+            const loginGoogle = () => signInWithPopup(auth, googleProvider).catch(e => alert(e.message));
+            const loginGuest = () => signInAnonymously(auth).catch(e => alert(e.message));
+            const logout = () => signOut(auth);
+            return { user, loginGoogle, loginGuest, logout };
         };
 
-        // --- COMPONENTS ---
-
-        // 1. DASHBOARD
-        const Dashboard = ({ user, setView }) => (
-            <div className="flex-1 overflow-y-auto bg-slate-50 safe-pb page-enter">
-                <div className="bg-emerald-900 text-white p-6 pt-12 rounded-b-3xl shadow-xl">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-emerald-200 text-xs font-bold uppercase tracking-wider mb-1">Welcome back</p>
-                            <h1 className="text-2xl font-bold">{user.displayName || "Golfer"}</h1>
-                            <div className="inline-flex items-center gap-2 mt-3 bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 backdrop-blur-sm">
-                                <Icon name="activity" size={14} className="text-emerald-400" />
-                                <span className="text-xs font-bold">HCP 18.0</span>
-                            </div>
-                        </div>
-                        <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center border border-white/10">
-                            <Icon name="bell" size={18} />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="p-5 space-y-4 -mt-6">
-                    <button onClick={() => setView('setup')} className="w-full bg-white p-5 rounded-2xl shadow-lg border border-slate-100 flex items-center justify-between group active:scale-[0.98] transition-transform duration-200">
-                        <div className="text-left">
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide">Tournament Mode</span>
-                            </div>
-                            <span className="block text-xl font-bold text-slate-800">Start New Game</span>
-                            <span className="text-xs text-slate-400">Setup Holes, Format & Players</span>
-                        </div>
-                        <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center border border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                            <Icon name="trophy" fill="currentColor" size={20} />
-                        </div>
-                    </button>
-
-                    <div className="grid grid-cols-2 gap-3">
-                        <button onClick={() => setView('wildlife')} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 active:scale-95 transition">
-                            <span className="text-3xl">🐊</span>
-                            <div className="text-sm font-bold text-slate-700">Wildlife</div>
-                        </button>
-                        <button onClick={() => setView('ai-caddy')} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 active:scale-95 transition">
-                            <span className="text-3xl">🤖</span>
-                            <div className="text-sm font-bold text-slate-700">AI Caddy</div>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-
-        // 2. WIZARD SETUP VIEW (New Flow)
-        const SetupView = ({ setView, setPlayers, setGameFormat, setConfig }) => {
-            const [step, setStep] = useState(1); // 1: Holes, 2: Format, 3: Mode, 4: Players
-            const [holeSelection, setHoleSelection] = useState('18');
-            const [mainFormat, setMainFormat] = useState('stroke');
-            const [subFormat, setSubFormat] = useState('individual');
-            const [flights, setFlights] = useState([[{id: 1, name: 'You', hcp: 18}]]);
-
-            // --- NAVIGATION HELPERS ---
-            const nextStep = () => setStep(step + 1);
-            const prevStep = () => setStep(step - 1);
-
-            // --- PLAYER MANAGEMENT ---
-            const addPlayer = (fIdx) => {
-                if (flights[fIdx].length >= 4) return;
-                const newF = [...flights];
-                newF[fIdx].push({ id: Date.now(), name: `Player ${newF[fIdx].length+1}`, hcp: 18 });
-                setFlights(newF);
-            };
-            const addFlight = () => setFlights([...flights, [{ id: Date.now(), name: 'Player 1', hcp: 18 }]]);
-            const updatePlayer = (fIdx, pIdx, k, v) => {
-                const newF = [...flights];
-                newF[fIdx][pIdx][k] = v;
-                setFlights(newF);
-            };
-
-            const startGame = () => {
-                const all = [];
-                flights.forEach((f, i) => f.forEach(p => all.push({ ...p, flight: i+1, scores: {} })));
-                setPlayers(all);
-                setGameFormat(mainFormat); // Store for scoring logic
-                setConfig({ holeSelection, subFormat }); // Store for display
-                setView('play');
-            };
-
-            // --- RENDER STEPS ---
-            const renderStep1 = () => (
-                <div className="space-y-3 animate-slide-up">
-                    <h3 className="text-emerald-800 font-bold mb-4 uppercase tracking-widest text-xs">Step 1: Select Holes</h3>
-                    {['18 Holes', 'Front 9', 'Back 9'].map(opt => (
-                        <button key={opt} onClick={() => { setHoleSelection(opt); nextStep(); }} className="w-full bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center hover:border-emerald-500 hover:bg-emerald-50 transition">
-                            <span className="font-bold text-slate-700">{opt}</span>
-                            <Icon name="arrow-right" size={18} className="text-slate-300" />
-                        </button>
-                    ))}
-                </div>
-            );
-
-            const renderStep2 = () => (
-                <div className="space-y-3 animate-slide-up">
-                    <h3 className="text-emerald-800 font-bold mb-4 uppercase tracking-widest text-xs">Step 2: Game Format</h3>
-                    <button onClick={() => { setMainFormat('stroke'); nextStep(); }} className="w-full bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col items-start gap-1 hover:border-emerald-500 hover:bg-emerald-50 transition">
-                        <span className="font-bold text-slate-800 text-lg">Stroke Play</span>
-                        <span className="text-xs text-slate-400">Total strokes counts</span>
-                    </button>
-                    <button onClick={() => { setMainFormat('stableford'); nextStep(); }} className="w-full bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col items-start gap-1 hover:border-emerald-500 hover:bg-emerald-50 transition">
-                        <span className="font-bold text-slate-800 text-lg">Stableford</span>
-                        <span className="text-xs text-slate-400">Points based on handicap</span>
-                    </button>
-                </div>
-            );
-
-            const renderStep3 = () => {
-                const options = mainFormat === 'stroke' 
-                    ? ['Individual', 'Skins', 'Match Play', 'Better Ball'] 
-                    : ['Individual', 'Skins', 'Better Ball'];
-
-                return (
-                    <div className="space-y-3 animate-slide-up">
-                        <h3 className="text-emerald-800 font-bold mb-4 uppercase tracking-widest text-xs">Step 3: {mainFormat === 'stroke' ? 'Stroke' : 'Stableford'} Mode</h3>
-                        {options.map(opt => (
-                            <button key={opt} onClick={() => { setSubFormat(opt); nextStep(); }} className="w-full bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center hover:border-emerald-500 hover:bg-emerald-50 transition">
-                                <span className="font-bold text-slate-700">{opt}</span>
-                                <Icon name="check-circle" size={18} className="text-slate-300" />
-                            </button>
-                        ))}
-                    </div>
-                );
-            };
-
-            const renderStep4 = () => (
-                <div className="animate-slide-up">
-                    <h3 className="text-emerald-800 font-bold mb-4 uppercase tracking-widest text-xs">Step 4: Players</h3>
-                    <div className="space-y-6 mb-6">
-                        {flights.map((f, i) => (
-                            <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                                <div className="flex justify-between items-center mb-3 border-b border-slate-100 pb-2">
-                                    <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Flight {i + 1}</span>
-                                    <span className="text-xs font-medium text-slate-400">{f.length}/4 Players</span>
-                                </div>
-                                <div className="space-y-3">
-                                    {f.map((p, j) => (
-                                        <div key={p.id} className="flex gap-2 items-center">
-                                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">{j+1}</div>
-                                            <input className="flex-1 bg-transparent border-b border-slate-200 py-1.5 font-semibold text-slate-700 focus:border-emerald-500 outline-none text-sm" value={p.name} onChange={(e) => updatePlayer(i, j, 'name', e.target.value)} />
-                                            <input type="number" className="w-12 bg-transparent border-b border-slate-200 py-1.5 font-semibold text-slate-700 text-center focus:border-emerald-500 outline-none text-sm" value={p.hcp} onChange={(e) => updatePlayer(i, j, 'hcp', Number(e.target.value))} />
-                                        </div>
-                                    ))}
-                                    {f.length < 4 && <button onClick={() => addPlayer(i)} className="w-full py-2.5 mt-2 border border-dashed border-slate-300 text-slate-400 rounded-lg font-bold text-xs hover:border-emerald-400 hover:text-emerald-600 transition flex items-center justify-center gap-1"><Icon name="plus" size={14}/> Add Player</button>}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <button onClick={addFlight} className="mt-4 w-full py-3 border-2 border-slate-200 text-slate-400 rounded-xl font-bold text-sm hover:border-emerald-500 flex items-center justify-center gap-2 mb-4"><Icon name="users" size={16}/> Add Another Flight</button>
-                    <button onClick={startGame} className="w-full bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-emerald-200 text-base flex items-center justify-center gap-2 active:scale-95 transition">
-                        Start Game 🚀
-                    </button>
-                </div>
-            );
-
-            return (
-                <div className="flex-1 bg-slate-50 flex flex-col h-full p-5 pt-12 overflow-y-auto page-enter">
-                    <div className="flex justify-between items-center mb-6">
-                        {step > 1 ? (
-                            <button onClick={prevStep} className="p-2 -ml-2 text-slate-400 hover:text-slate-600"><Icon name="arrow-left" /></button>
-                        ) : (
-                            <button onClick={() => setView('dashboard')} className="p-2 -ml-2 text-slate-400 hover:text-slate-600"><Icon name="x" /></button>
-                        )}
-                        <div className="flex gap-1">
-                            {[1,2,3,4].map(s => (
-                                <div key={s} className={`h-1.5 rounded-full transition-all duration-300 ${s <= step ? 'w-6 bg-emerald-500' : 'w-2 bg-slate-200'}`}></div>
-                            ))}
-                        </div>
-                        <div className="w-8"></div>
-                    </div>
-
-                    {step === 1 && renderStep1()}
-                    {step === 2 && renderStep2()}
-                    {step === 3 && renderStep3()}
-                    {step === 4 && renderStep4()}
-                </div>
-            );
-        };
-
-        // 3. GAME VIEW (Safe + Config Display)
-        const GameView = ({ players, setPlayers, setView, gameFormat, holeIdx, setHoleIdx, config }) => {
+        function App() {
+            const { user, loginGoogle, loginGuest, logout } = useAuth();
+            const [view, setView] = useState('auth'); 
+            const [players, setPlayers] = useState([]); 
             const [activePlayerId, setActivePlayerId] = useState(0); 
-            const [isConfirmed, setIsConfirmed] = useState(false);
+            const [currentHole, setCurrentHole] = useState(1);
             const [caddyMsg, setCaddyMsg] = useState("");
             const [loading, setLoading] = useState(false);
+            const [lang, setLang] = useState('en');
             
-            const hole = HOLES[holeIdx];
-            
-            // --- CRASH GUARD ---
-            if (!players || players.length === 0) return <div className="p-10 text-center text-slate-500">Loading Players...<br/><button onClick={()=>setView('setup')} className="mt-4 text-emerald-600 font-bold underline">Go to Setup</button></div>;
-            
-            const activePlayer = players[activePlayerId] || players[0];
-            const score = activePlayer.scores[hole.number] || hole.par;
+            // Setup
+            const [setupName, setSetupName] = useState("");
+            const [setupHcp, setSetupHcp] = useState(18);
 
-            useEffect(() => setIsConfirmed(false), [activePlayerId, holeIdx]);
+            useEffect(() => { 
+                if (user && players.length === 0) {
+                    setPlayers([{ id: 0, name: user.displayName ? user.displayName.split(' ')[0] : "You", hcp: 18, scores: {} }]);
+                    setView('home'); 
+                }
+            }, [user]);
 
+            const holeInfo = HOLES.find(h => h.number === currentHole) || HOLES[0];
+            // CRITICAL FIX: Ensure activePlayer exists
+            const activePlayer = players[activePlayerId] || players[0]; 
+            const currentScore = activePlayer?.scores[currentHole] || holeInfo.par;
+
+            // --- ENGINE ---
             const updateScore = (val) => {
-                setIsConfirmed(false);
-                const newPlayers = players.map((p, idx) => {
-                    if (idx !== activePlayerId) return p;
-                    return {
-                        ...p,
-                        scores: { ...p.scores, [hole.number]: Math.max(1, score + val) }
-                    };
-                });
+                const newPlayers = [...players]; // Copy array
+                const p = { ...newPlayers[activePlayerId] }; // Copy player object
+                p.scores = { ...p.scores }; // Copy scores object
+                
+                const oldScore = p.scores[currentHole] || holeInfo.par;
+                p.scores[currentHole] = Math.max(1, oldScore + val);
+                
+                newPlayers[activePlayerId] = p; // Update array
                 setPlayers(newPlayers);
             };
 
-            const confirmScore = () => setIsConfirmed(true);
-            const getPoints = (g) => Math.max(0, hole.par - (g - (activePlayer.hcp >= hole.si ? 1 : 0)) + 2);
-            
-            const askTiger = async () => {
+            const getPoints = (h, score, hcp) => {
+                if (!score) return 0;
+                let free = 0;
+                if (hcp >= h.si) free = 1;
+                if (hcp - 18 >= h.si) free = 2;
+                return Math.max(0, h.par - (score - free) + 2);
+            };
+
+            const getTotals = (p) => {
+                let gross = 0, net = 0, pts = 0;
+                Object.entries(p.scores).forEach(([hNum, score]) => {
+                    const hole = HOLES.find(h => h.number == hNum);
+                    if (!hole) return;
+                    gross += score;
+                    let free = 0;
+                    if (p.hcp >= hole.si) free = 1;
+                    if (p.hcp - 18 >= hole.si) free = 2;
+                    net += Math.max(1, score - free);
+                    pts += getPoints(hole, score, p.hcp);
+                });
+                return { gross, net, pts };
+            };
+
+            const handleAskCaddy = async () => {
                 setLoading(true);
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`;
-                const prompt = `Short golf advice for Mangais Hole ${hole.number} (Par ${hole.par}, ${hole.dist}m). Pro Tip: ${hole.tip}. Hazards: ${hole.hazard||'None'}.`;
-                try {
-                    const res = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-                    const data = await res.json();
-                    if(data.candidates) setCaddyMsg(data.candidates[0].content.parts[0].text);
-                    else setCaddyMsg(hole.tip);
-                } catch(e) { setCaddyMsg(hole.tip); }
+                const advice = await askCaddy(holeInfo, activePlayer, lang);
+                setCaddyMsg(advice);
                 setLoading(false);
             };
 
-            const mainDisplay = score; 
-            const subDisplay = gameFormat === 'stableford' ? `${getPoints(score)} PTS` : `Net ${score - (activePlayer.hcp >= hole.si ? 1 : 0)}`;
+            const addPlayer = () => {
+                if(players.length >= 4) return alert("Max 4 players.");
+                if(!setupName) return alert("Name required.");
+                setPlayers([...players, { id: players.length, name: setupName, hcp: setupHcp, scores: {} }]);
+                setSetupName("");
+                setSetupHcp(18);
+            };
 
-            return (
-                <div className="flex-1 flex flex-col h-full bg-slate-50 relative safe-pb page-enter">
-                    <div className="bg-emerald-900 pt-10 pb-6 px-4 rounded-b-3xl shadow-lg z-10 text-white">
-                        <div className="flex justify-between items-center mb-2">
-                            <button onClick={()=>setView('dashboard')}><Icon name="home" className="text-emerald-200" /></button>
-                            <div className="flex flex-col items-center">
-                                <span className="font-bold text-emerald-100 text-xs uppercase tracking-widest">Hole {hole.number}</span>
-                                <span className="text-[10px] text-emerald-400 capitalize">{config.subFormat}</span>
-                            </div>
-                            <button onClick={()=>setView('leaderboard')}><Icon name="list" className="text-emerald-200" /></button>
+            // --- VIEWS ---
+            if (!user) return (
+                <div className="h-[100dvh] flex flex-col items-center justify-center p-8 bg-emerald-900 text-white bg-[url('https://picsum.photos/800/1200?random=golf')] bg-cover bg-blend-overlay">
+                    <div className="text-6xl mb-4 animate-bounce">🏆</div>
+                    <h1 className="text-4xl font-black mb-2">MANGAIS</h1>
+                    <p className="text-emerald-200 text-xs mb-8 uppercase tracking-widest font-bold">Tournament Pro</p>
+                    <button onClick={loginGoogle} className="w-full bg-white text-emerald-900 py-4 rounded-xl font-bold mb-3 shadow-xl">Google Sign In</button>
+                    <button onClick={loginGuest} className="w-full border border-white/30 text-white py-4 rounded-xl font-bold backdrop-blur-sm">Visitor Access</button>
+                </div>
+            );
+
+            if (view === 'home') return (
+                <div className="h-[100dvh] flex flex-col bg-slate-50">
+                    <div className="h-64 bg-emerald-800 relative overflow-hidden rounded-b-[40px] shadow-lg shrink-0">
+                        <div className="absolute inset-0 bg-black/20"></div>
+                        <div className="absolute top-6 right-6 flex gap-2 z-10">
+                            <button onClick={() => setLang(lang==='en'?'pt':'en')} className="bg-white/20 text-white px-3 py-1 rounded-full text-xs font-bold backdrop-blur-md">{lang.toUpperCase()}</button>
+                            <button onClick={logout} className="bg-white/20 text-white px-3 py-1 rounded-full text-xs font-bold backdrop-blur-md">Exit</button>
                         </div>
-                        <div className="flex justify-between items-end">
-                            <div>
-                                <h2 className="text-4xl font-black mb-1">{hole.par} <span className="text-lg font-medium opacity-60">PAR</span></h2>
-                                <div className="flex gap-3 text-xs font-bold text-emerald-300">
-                                    <span>SI {hole.si}</span>
-                                    <span>•</span>
-                                    <span>{hole.dist}m</span>
-                                </div>
-                            </div>
-                            <div className="flex gap-2">
-                                <button onClick={()=>setHoleIdx(Math.max(0, holeIdx-1))} disabled={holeIdx===0} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 disabled:opacity-30"><Icon name="chevron-left" /></button>
-                                <button onClick={()=>setHoleIdx(Math.min(17, holeIdx+1))} disabled={holeIdx===17} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 disabled:opacity-30"><Icon name="chevron-right" /></button>
-                            </div>
+                        <div className="absolute bottom-8 left-6 text-white z-10">
+                            <h1 className="text-3xl font-bold">{user.displayName ? user.displayName.split(' ')[0] : 'Golfer'}</h1>
+                            <p className="opacity-90 text-sm mt-1">{players.length > 1 ? `${players.length} Players Active` : 'Solo Round'}</p>
                         </div>
                     </div>
+                    <div className="flex-1 p-6 -mt-10 relative z-10 space-y-4">
+                        <button onClick={() => setView('play')} className="w-full bg-white p-6 rounded-2xl shadow-xl flex items-center justify-between border border-emerald-50 active:scale-95 transition">
+                            <div><span className="text-xs font-bold text-emerald-600 uppercase block mb-1">Resume</span><span className="block text-2xl font-black text-slate-800">Play Golf</span></div>
+                            <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-2xl">⛳</div>
+                        </button>
+                        <div className="grid grid-cols-2 gap-4">
+                            <button onClick={() => setView('setup')} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 active:scale-95 transition"><span className="text-3xl">👥</span><span className="font-bold text-slate-700 text-sm">Flight</span></button>
+                            <button onClick={() => setView('leaderboard')} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 active:scale-95 transition"><span className="text-3xl">🏆</span><span className="font-bold text-slate-700 text-sm">Standings</span></button>
+                        </div>
+                    </div>
+                </div>
+            );
 
-                    <div className="flex overflow-x-auto px-4 py-3 gap-2 bg-white border-b border-slate-100 no-scrollbar">
+            if (view === 'setup') return (
+                <div className="h-[100dvh] flex flex-col bg-slate-50 p-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-bold text-slate-800">Flight Setup</h2>
+                        <button onClick={() => setView('home')} className="text-slate-400 font-bold">Close</button>
+                    </div>
+                    <div className="bg-white p-6 rounded-2xl shadow-sm mb-6 border border-emerald-50">
+                        <h3 className="font-bold mb-4 text-emerald-900">Add Player</h3>
+                        <div className="space-y-3">
+                            <input value={setupName} onChange={e=>setSetupName(e.target.value)} placeholder="Player Name" className="w-full p-3 bg-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-bold text-slate-500">HCP:</span>
+                                <input type="number" value={setupHcp} onChange={e=>setSetupHcp(Number(e.target.value))} className="w-20 p-3 bg-slate-100 rounded-xl text-center font-bold" />
+                            </div>
+                            <button onClick={addPlayer} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold active:scale-95 transition">+ Add to Flight</button>
+                        </div>
+                    </div>
+                    <div className="space-y-2 flex-1 overflow-y-auto">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase">Current Flight</h3>
                         {players.map((p, i) => (
-                            <button key={i} onClick={()=>setActivePlayerId(i)} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${activePlayerId === i ? 'bg-emerald-900 text-white shadow-md' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>
-                                {p.name.split(' ')[0]}
+                            <div key={i} className="flex justify-between bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                                <span className="font-bold text-slate-800">{p.name}</span>
+                                <span className="text-emerald-600 font-bold text-sm bg-emerald-50 px-2 py-1 rounded">HCP {p.hcp}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <button onClick={() => setView('play')} className="mt-4 w-full bg-emerald-900 text-white py-4 rounded-xl font-bold shadow-lg">Start Round 🚀</button>
+                </div>
+            );
+
+            if (view === 'play') return (
+                <div className="h-[100dvh] flex flex-col bg-slate-50">
+                    <div className="bg-white p-4 shadow-sm flex justify-between items-center z-10 border-b border-gray-100 shrink-0">
+                        <button onClick={() => setView('home')} className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-full text-slate-600">🏠</button>
+                        <div className="text-center">
+                            <h2 className="font-black text-xl text-slate-800">HOLE {currentHole}</h2>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Par {holeInfo.par} • SI {holeInfo.si} • {holeInfo.dist}m</p>
+                        </div>
+                        <button onClick={() => setView('leaderboard')} className="text-2xl">🏆</button>
+                    </div>
+
+                    <div className="bg-white border-b border-slate-100 p-3 overflow-x-auto no-scrollbar flex gap-2 shadow-inner shrink-0">
+                        {players.map((p, i) => (
+                            <button key={i} onClick={() => setActivePlayerId(i)} 
+                                className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition flex items-center gap-2 ${activePlayerId === i ? 'active-player' : 'bg-slate-100 text-slate-400'}`}>
+                                {p.name}
+                                {activePlayerId === i && <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>}
                             </button>
                         ))}
                     </div>
 
-                    <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-6">
-                        <div className={`w-full max-w-xs bg-white rounded-3xl p-6 shadow-xl border transition-all duration-300 ${isConfirmed ? 'border-emerald-500 ring-2 ring-emerald-100' : 'border-slate-100'}`}>
-                            <div className="text-center mb-6">
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Scoring For</span>
-                                <span className="text-lg font-bold text-slate-800">{activePlayer.name}</span>
+                    <div className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-y-auto w-full">
+                        <div className="bg-white w-full max-w-xs p-6 rounded-3xl shadow-xl border border-emerald-50 text-center mb-6 relative overflow-hidden shrink-0">
+                            <div className="absolute top-0 left-0 w-full h-1.5 bg-emerald-500"></div>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Scoring for <span className="text-emerald-600">{activePlayer?.name}</span></p>
+                            <div className="flex items-center justify-between mb-6">
+                                <button onClick={() => updateScore(-1)} className="w-14 h-14 rounded-full bg-slate-100 text-2xl font-bold text-slate-600 hover:bg-slate-200 transition">-</button>
+                                <div className="text-8xl font-black text-slate-800 tabular-nums leading-none">{currentScore}</div>
+                                <button onClick={() => updateScore(1)} className="w-14 h-14 rounded-full bg-emerald-600 text-white text-2xl font-bold shadow-lg shadow-emerald-200 hover:bg-emerald-700 transition">+</button>
                             </div>
+                            <div className="inline-flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-full text-xs font-bold text-slate-600">
+                                <span>{getPoints(holeInfo, currentScore, activePlayer?.hcp)} Pts</span>
+                                <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
+                                <span>Net {currentScore - ((activePlayer?.hcp >= holeInfo.si) ? 1 : 0)}</span>
+                            </div>
+                        </div>
 
-                            <div className="flex items-center justify-between mb-8">
-                                <button onClick={()=>updateScore(-1)} className="w-14 h-14 rounded-full bg-slate-50 text-slate-600 flex items-center justify-center border border-slate-200 active:scale-95 transition"><Icon name="minus" /></button>
-                                <div className="text-center">
-                                    <span className="text-7xl font-black text-slate-900 block leading-none">{mainDisplay}</span>
-                                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full mt-2 inline-block">{subDisplay}</span>
+                        <div className="w-full max-w-xs space-y-3 shrink-0 pb-4">
+                            {caddyMsg && (
+                                <div className="caddy-bubble animate-in slide-in-from-bottom-2">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <span className="text-emerald-200 font-bold text-[10px] uppercase">Tiger Strategy</span>
+                                        <span className="text-xs opacity-50">🤖</span>
+                                    </div>
+                                    <p className="text-sm font-medium leading-snug">"{caddyMsg}"</p>
                                 </div>
-                                <button onClick={()=>updateScore(1)} className="w-14 h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-200 active:scale-95 transition"><Icon name="plus" /></button>
-                            </div>
-
-                            <button onClick={confirmScore} className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${isConfirmed ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-900 text-white shadow-lg hover:bg-slate-800'}`}>
-                                {isConfirmed ? <><Icon name="check" size={18}/> Score Saved</> : "Confirm Score"}
+                            )}
+                            <button onClick={handleAskCaddy} disabled={loading} className="w-full py-4 bg-white border border-slate-200 rounded-2xl font-bold text-sm text-slate-700 shadow-sm flex items-center justify-center gap-2 active:scale-95 transition">
+                                {loading ? <span className="animate-spin">⏳ Thinking...</span> : <span>🤖 Ask Caddy</span>}
                             </button>
                         </div>
+                    </div>
 
-                        <div className="w-full max-w-xs space-y-3">
-                            {caddyMsg && <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl text-sm text-emerald-800 font-medium animate-in">💡 {caddyMsg}</div>}
-                            <button onClick={askTiger} disabled={loading} className="w-full bg-white border border-slate-200 py-4 rounded-2xl font-bold shadow-sm text-slate-700 flex items-center justify-center gap-2 hover:bg-slate-50 transition"><span>🐯</span> {loading ? "Thinking..." : "Tiger Strategy"}</button>
-                        </div>
+                    <div className="p-4 bg-white border-t border-slate-200 shrink-0 safe-area-pb">
+                        {currentHole === 18 ? (
+                            <button onClick={() => { if(window.confirm("✍️ Sign Scorecard & Finish Round?")) setView('leaderboard'); }} className="w-full bg-emerald-900 text-white py-4 rounded-xl font-bold text-lg shadow-lg btn-pulse">
+                                ✍️ SIGN SCORECARD
+                            </button>
+                        ) : (
+                            <button onClick={() => { setCurrentHole(c=>c+1); setCaddyMsg(""); }} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition">
+                                NEXT HOLE ➡️
+                            </button>
+                        )}
                     </div>
                 </div>
             );
-        };
 
-        // 4. LEADERBOARD
-        const LeaderboardView = ({ players, setView, gameFormat }) => {
-            const [expandedId, setExpandedId] = useState(null);
-            const getPoints = (g, hcp, si, par) => Math.max(0, par - (g - (hcp >= si ? 1 : 0)) + 2);
-            const calcStats = (p) => {
-                let gross = 0, pts = 0;
-                HOLES.forEach(h => {
-                    const s = p.scores[h.number];
-                    if(s) { gross += s; pts += getPoints(s, p.hcp, h.si, h.par); }
-                });
-                return { gross, pts };
-            }
-            const sortedPlayers = [...players].sort((a, b) => {
-                const sA = calcStats(a), sB = calcStats(b);
-                return gameFormat === 'stableford' ? sB.pts - sA.pts : sA.gross - sB.gross;
-            });
-
-            return (
-                <div className="flex-1 bg-slate-50 flex flex-col h-full safe-pb overflow-hidden page-enter">
-                    <div className="bg-emerald-900 p-6 pt-12 pb-6 shadow-lg text-white shrink-0">
-                        <div className="flex justify-between items-center mb-2">
-                            <button onClick={() => setView('play')} className="font-bold text-emerald-200"><Icon name="arrow-left" /></button>
-                            <h2 className="font-bold text-xl">Leaderboard</h2>
+            if (view === 'leaderboard') return (
+                <div className="h-[100dvh] flex flex-col bg-white">
+                    <div className="bg-emerald-900 p-6 rounded-b-3xl shadow-lg shrink-0 text-white">
+                        <div className="flex justify-between items-center mb-6">
+                            <button onClick={() => setView('play')} className="text-emerald-200 hover:text-white"><span className="text-2xl">←</span></button>
+                            <h2 className="font-bold text-lg uppercase tracking-widest">Final Standings</h2>
                             <div className="w-6"></div>
                         </div>
-                        <div className="flex justify-center gap-4 text-xs font-bold text-emerald-300 uppercase tracking-widest">
-                            <span>{gameFormat === 'stableford' ? 'Stableford' : 'Stroke Play'}</span>
-                            <span>•</span>
-                            <span>{players.length} Players</span>
-                        </div>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                        {sortedPlayers.map((p, i) => {
-                            const stats = calcStats(p);
-                            const isExpanded = expandedId === p.id;
+                        {players.length > 0 && (() => {
+                            // SAFE SORTING: Copy array first to avoid state mutation bug!
+                            const sorted = [...players].sort((a,b) => getTotals(b).pts - getTotals(a).pts);
+                            const winner = sorted[0];
+                            const winStats = getTotals(winner);
                             return (
-                                <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                                    <div className="p-4 flex items-center justify-between cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : p.id)}>
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-8 h-8 flex items-center justify-center rounded-full font-bold text-sm bg-slate-100 text-slate-500">{i+1}</div>
-                                            <div><h4 className="font-bold text-slate-800">{p.name}</h4><p className="text-xs text-slate-400">Flight {p.flight} • HCP {p.hcp}</p></div>
-                                        </div>
-                                        <div className="text-right">
-                                            <span className="block text-2xl font-black text-emerald-700">{gameFormat==='stableford' ? stats.pts : stats.gross}</span>
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase">{gameFormat==='stableford' ? 'PTS' : 'STR'}</span>
-                                        </div>
+                                <div className="text-center pb-2">
+                                    <div className="w-20 h-20 bg-yellow-400 rounded-full flex items-center justify-center text-4xl mx-auto mb-3 border-4 border-emerald-800 shadow-xl">🏆</div>
+                                    <h3 className="text-3xl font-black">{winner.name}</h3>
+                                    <p className="text-emerald-300 text-xs font-bold uppercase mb-4">Tournament Champion</p>
+                                    <div className="inline-flex bg-emerald-800/50 rounded-lg p-3 gap-6 border border-emerald-700">
+                                        <div className="text-center"><span className="block text-xl font-bold">{winStats.gross}</span><span className="text-[9px] uppercase opacity-70">Gross</span></div>
+                                        <div className="text-center"><span className="block text-xl font-bold text-yellow-400">{winStats.pts}</span><span className="text-[9px] uppercase opacity-70 text-yellow-400">Points</span></div>
                                     </div>
-                                    {isExpanded && (
-                                        <div className="bg-slate-50 border-t border-slate-100 p-3 animate-slide-down">
-                                            <div className="grid grid-cols-9 gap-1 text-center">
-                                                {HOLES.map(h => (
-                                                    <div key={h.number} className="bg-white rounded p-1 border border-slate-100">
-                                                        <div className="text-[8px] font-bold text-slate-400">{h.number}</div>
-                                                        <div className="font-bold text-sm text-slate-800">{p.scores[h.number] || '-'}</div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             );
-                        })}
+                        })()}
                     </div>
-                </div>
-            );
-        };
 
-        // 5. WILDLIFE
-        const WildlifeView = ({ setView, holeIdx }) => {
-            const [sightings, setSightings] = useState([
-                { id: 1, animal: 'Crocodile', hole: 13, loc: 'Water Hazard', time: '20m ago', alert: true },
-                { id: 2, animal: 'Fish Eagle', hole: 5, time: '1h ago', alert: false }
-            ]);
-            const [modal, setModal] = useState(null);
-            const [loc, setLoc] = useState('');
-
-            const submit = () => {
-                if(!loc) return alert("Location?");
-                setSightings([{ id: Date.now(), animal: modal==='croc'?'Crocodile':'Bird', hole: holeIdx+1, loc, time: 'Just now', alert: modal==='croc' }, ...sightings]);
-                setModal(null); setLoc('');
-            };
-
-            return (
-                <div className="flex-1 bg-slate-50 h-full safe-pb page-enter flex flex-col">
-                    <div className="bg-emerald-900 p-6 pt-12 pb-6 text-white rounded-b-3xl shadow-lg">
-                        <div className="flex justify-between items-center">
-                            <button onClick={()=>setView('dashboard')}><Icon name="arrow-left" /></button>
-                            <h2 className="font-bold">Nature Watch</h2>
-                            <div className="w-6"></div>
+                    <div className="flex-1 overflow-y-auto p-4 bg-slate-50">
+                        <div className="grid grid-cols-[30px_1fr_40px_40px_40px] px-2 mb-2 text-[10px] font-bold text-slate-400 uppercase text-center">
+                            <span>#</span><span className="text-left">Player</span><span>Gro</span><span>Net</span><span>Pts</span>
                         </div>
-                    </div>
-                    
-                    <div className="p-5 flex-1 overflow-y-auto">
-                        <div className="grid grid-cols-2 gap-3 mb-6">
-                            <button onClick={()=>setModal('croc')} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 hover:border-amber-400 transition">
-                                <span className="text-3xl">🐊</span><span className="text-xs font-bold text-slate-700">Log Croc</span>
-                            </button>
-                            <button onClick={()=>setModal('bird')} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 hover:border-sky-400 transition">
-                                <span className="text-3xl">🦅</span><span className="text-xs font-bold text-slate-700">Log Bird</span>
-                            </button>
-                        </div>
-
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Recent Sightings</h3>
-                        <div className="space-y-3">
-                            {sightings.map(s => (
-                                <div key={s.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${s.alert ? 'bg-amber-100' : 'bg-sky-100'}`}>{s.alert?'🐊':'🦅'}</div>
-                                    <div>
-                                        <div className="flex items-center gap-2"><span className="font-bold text-sm text-slate-800">{s.animal}</span> <span className="text-[10px] text-slate-400">{s.time}</span></div>
-                                        <p className="text-xs text-slate-500">Hole {s.hole} • {s.loc || 'General area'}</p>
+                        <div className="space-y-2">
+                            {[...players].sort((a,b) => getTotals(b).pts - getTotals(a).pts).map((p, i) => {
+                                const stats = getTotals(p);
+                                return (
+                                    <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-100 p-3 grid grid-cols-[30px_1fr_40px_40px_40px] items-center text-center">
+                                        <span className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold mx-auto ${i===0 ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100 text-slate-500'}`}>{i+1}</span>
+                                        <div className="text-left overflow-hidden">
+                                            <span className="block font-bold text-slate-800 text-sm truncate">{p.name}</span>
+                                            <span className="text-[9px] text-slate-400">HCP {p.hcp}</span>
+                                        </div>
+                                        <span className="text-sm font-bold text-slate-600">{stats.gross}</span>
+                                        <span className="text-sm font-bold text-slate-600">{stats.net}</span>
+                                        <span className="text-lg font-black text-emerald-600">{stats.pts}</span>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
-
-                    {modal && (
-                        <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-6 backdrop-blur-sm animate-in fade-in">
-                            <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-slide-up">
-                                <h3 className="font-bold text-lg mb-1 text-slate-800">Spotting a {modal==='croc'?'Crocodile':'Bird'}</h3>
-                                <p className="text-xs text-slate-500 mb-4">You are on Hole {holeIdx+1}</p>
-                                <input className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm mb-4 outline-none focus:border-emerald-500" placeholder="Where exactly? (e.g. River bank)" value={loc} onChange={e=>setLoc(e.target.value)} autoFocus />
-                                <button className="w-full py-3 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 text-sm font-bold mb-4 flex items-center justify-center gap-2"><Icon name="camera" size={16}/> Add Photo</button>
-                                <div className="flex gap-3">
-                                    <button onClick={()=>setModal(null)} className="flex-1 py-3 text-sm font-bold text-slate-500">Cancel</button>
-                                    <button onClick={submit} className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg">Submit Log</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-        };
-
-        // 6. CADDY
-        const CaddyView = ({ setView, holeIdx }) => {
-            const [messages, setMessages] = useState([{ role: 'model', text: "Hello! I'm your Mangais AI Caddy. Ask me about wind, strategy, or rules." }]);
-            const [input, setInput] = useState('');
-            const [loading, setLoading] = useState(false);
-            const [status, setStatus] = useState("online");
-            const scrollRef = useRef(null);
-
-            useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
-
-            const ask = async (query) => {
-                const userText = query || input;
-                if(!userText.trim()) return;
-                setMessages(prev => [...prev, { role: 'user', text: userText }]);
-                setInput('');
-                setLoading(true);
-
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`;
-                const prompt = `You are Mangais Caddy. Warn about crocodiles on holes 5, 8, 13, 18. Keep it brief.`;
-
-                try {
-                    const res = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt + "\n\nUser: " + userText }] }] }) });
-                    const data = await res.json();
-                    if (data.candidates) {
-                        setStatus("online");
-                        setMessages(prev => [...prev, { role: 'model', text: data.candidates[0].content.parts[0].text }]);
-                    } else throw new Error("API Failure");
-                } catch(e) {
-                    setStatus("offline");
-                    setMessages(prev => [...prev, { role: 'model', text: "📡 (Offline): Wind is tricky today. Play it safe." }]);
-                }
-                setLoading(false);
-            };
-
-            return (
-                <div className="flex-1 bg-slate-50 flex flex-col h-full safe-pb page-enter">
-                    <div className="bg-emerald-900 p-4 pt-10 shadow-md text-white flex justify-between items-center sticky top-0 z-10">
-                        <button onClick={() => setView('dashboard')}><Icon name="arrow-left" /></button>
-                        <div className="flex flex-col items-center"><h2 className="font-bold">AI Caddy</h2><span className="text-[10px] opacity-80">{status}</span></div>
-                        <div className="w-6"></div>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-4 flex flex-col">
-                        {messages.map((m, i) => <div key={i} className={`chat-bubble ${m.role === 'user' ? 'user-bubble' : 'ai-bubble'}`}>{m.text}</div>)}
-                        {loading && <div className="text-xs text-slate-400 ml-4 animate-pulse">Thinking...</div>}
-                        <div ref={scrollRef}></div>
-                    </div>
-                    <div className="p-4 bg-white border-t border-slate-200">
-                        <div className="flex gap-2">
-                            <input value={input} onChange={e=>setInput(e.target.value)} placeholder="Ask..." className="flex-1 bg-slate-100 rounded-full px-4 py-3 text-sm outline-none" onKeyDown={e=>e.key==='Enter' && ask()} />
-                            <button onClick={()=>ask()} className="bg-emerald-600 text-white p-3 rounded-full shadow-md"><Icon name="send" size={18} /></button>
-                        </div>
+                    <div className="p-4 bg-white border-t border-slate-200 shrink-0">
+                        <button onClick={() => setView('home')} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold shadow-lg">Back to Club 🏠</button>
                     </div>
                 </div>
-            );
-        };
-
-        // 7. NAV
-        const NavBar = ({ view, setView }) => (
-            <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 pb-8 pt-2 px-6 flex justify-between items-center z-20">
-                <button onClick={()=>setView('dashboard')} className={`flex flex-col items-center gap-1 ${view==='dashboard'?'text-emerald-700':'text-slate-400'}`}>
-                    <Icon name="home" size={24} strokeWidth={view==='dashboard'?2.5:2} /><span className="text-[10px] font-bold">Home</span>
-                </button>
-                <button onClick={()=>setView('play')} className="mb-8 w-16 h-16 bg-emerald-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-emerald-200 border-4 border-slate-50 active:scale-95 transition-transform">
-                    <Icon name="flag" size={28} fill="currentColor" />
-                </button>
-                <button onClick={()=>setView('wildlife')} className={`flex flex-col items-center gap-1 ${view==='wildlife'?'text-emerald-700':'text-slate-400'}`}>
-                    <Icon name="trees" size={24} strokeWidth={view==='wildlife'?2.5:2} /><span className="text-[10px] font-bold">Nature</span>
-                </button>
-            </div>
-        );
-
-        // --- APP SHELL ---
-        function App() {
-            const [user, setUser] = useState(null);
-            const [view, setView] = useState('auth');
-            const [players, setPlayers] = useState([]);
-            const [gameFormat, setGameFormat] = useState('stableford');
-            const [config, setConfig] = useState({ holeSelection: '18', subFormat: 'Individual' });
-            const [holeIdx, setHoleIdx] = useState(0);
-
-            useEffect(() => {
-                onAuthStateChanged(auth, u => { setUser(u); if(u) setView('dashboard'); });
-                lucide.createIcons();
-            }, []);
-
-            useEffect(() => { lucide.createIcons(); }, [view]); 
-
-            const login = async () => { try { await signInWithPopup(auth, googleProvider); } catch(e) { alert("Use Guest Mode"); } };
-            const guest = async () => await signInAnonymously(auth);
-
-            if (!user) return (
-                <div className="h-full flex flex-col items-center justify-center p-8 bg-[url('https://images.unsplash.com/photo-1593111774240-d529f12cf4bb?w=800')] bg-cover bg-center">
-                    <div className="absolute inset-0 bg-emerald-900/90 backdrop-blur-sm"></div>
-                    <div className="relative z-10 w-full flex flex-col items-center text-white">
-                        <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center text-emerald-900 mb-6 shadow-2xl"><Icon name="flag" size={40} fill="currentColor" /></div>
-                        <h1 className="text-3xl font-black mb-2 tracking-tight">MANGAIS</h1>
-                        <p className="text-emerald-200 text-xs font-bold tracking-[0.3em] uppercase mb-12">Tournament Pro</p>
-                        <button onClick={login} className="w-full bg-white text-slate-900 py-4 rounded-xl font-bold shadow-xl mb-3 flex items-center justify-center gap-3"><Icon name="user" size={18}/> Sign In</button>
-                        <button onClick={guest} className="w-full bg-emerald-800/50 text-emerald-100 py-4 rounded-xl font-bold border border-emerald-500/30">Guest Access</button>
-                    </div>
-                </div>
-            );
-
-            return (
-                <>
-                    {view === 'dashboard' && <Dashboard user={user} setView={setView} />}
-                    {view === 'setup' && <SetupView setView={setView} setPlayers={setPlayers} setGameFormat={setGameFormat} setConfig={setConfig} />}
-                    {view === 'play' && <GameView players={players} setPlayers={setPlayers} setView={setView} gameFormat={gameFormat} holeIdx={holeIdx} setHoleIdx={setHoleIdx} config={config} />}
-                    {view === 'leaderboard' && <LeaderboardView players={players} setView={setView} gameFormat={gameFormat} />}
-                    {view === 'wildlife' && <WildlifeView setView={setView} holeIdx={holeIdx} />}
-                    {view === 'ai-caddy' && <CaddyView setView={setView} holeIdx={holeIdx} />}
-                    {(view === 'dashboard' || view === 'play' || view === 'wildlife' || view === 'ai-caddy') && <NavBar view={view} setView={setView} />}
-                </>
             );
         }
 
