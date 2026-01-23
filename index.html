@@ -27,20 +27,15 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style> 
-        /* FIX 1: Prevent scrolling on body to handle mobile heights better */
-        body { background-color: #f8fafc; color: #0f172a; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
-        
+        body { background-color: #f8fafc; color: #0f172a; font-family: 'Inter', sans-serif; overflow: hidden; height: 100dvh; width: 100vw; }
         .score-circle { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 800; font-size: 15px; border: 1px solid rgba(0,0,0,0.1); }
         .birdie { background-color: #ef4444; color: white; border: none; } 
         .par { background-color: #e2e8f0; color: #334155; }   
         .bogey { background-color: #3b82f6; color: white; border: none; }   
-        
         .active-player { border: 2px solid #059669; background-color: #ecfdf5; transform: scale(1.05); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); color: #065f46; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        
         .caddy-bubble { position: relative; background: #064e3b; color: white; border-radius: 16px; border-bottom-left-radius: 4px; padding: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .caddy-bubble::after { content: ''; position: absolute; bottom: 0; left: -8px; width: 0; height: 0; border: 8px solid transparent; border-right-color: #064e3b; border-bottom: 0; margin-bottom: 0; }
-        
         @keyframes pulse-soft { 0% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(5, 150, 105, 0); } 100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0); } }
         .btn-pulse { animation: pulse-soft 2s infinite; }
     </style>
@@ -54,6 +49,7 @@
         import { initializeApp } from 'firebase/app';
         import { getAuth, signInAnonymously, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
 
+        // --- CONFIGURATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyDSS05uLPrAKyPt6yBrNt1-xyWmHpJ0L-w",
             authDomain: "mangais-golf.firebaseapp.com",
@@ -91,7 +87,7 @@
 
         async function askCaddy(holeInfo, player, lang) {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`;
-            let playStyle = player.hcp < 10 ? "Aggressive (Go for birdie)" : player.hcp > 20 ? "Safe (Avoid hazards)" : "Balanced";
+            let playStyle = player.hcp < 10 ? "Aggressive" : player.hcp > 20 ? "Safe" : "Balanced";
             const prompt = `Act as Mangais Caddy. Player: ${player.name} (HCP ${player.hcp}). Style: ${playStyle}. Hole ${holeInfo.number} (${holeInfo.dist}m, Par ${holeInfo.par}). Tip: ${holeInfo.tip}. Give 1 sentence of strategic advice. Mention hazards/wind. Lang: ${lang}.`;
             try {
                 const response = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
@@ -118,6 +114,12 @@
             const [caddyMsg, setCaddyMsg] = useState("");
             const [loading, setLoading] = useState(false);
             const [lang, setLang] = useState('en');
+            
+            // --- NEW STATES FOR INTEGRITY ---
+            const [roundStatus, setRoundStatus] = useState('active'); // 'active' | 'finished'
+            const [expandedPlayerId, setExpandedPlayerId] = useState(null); // For detailed card view
+
+            // Setup
             const [setupName, setSetupName] = useState("");
             const [setupHcp, setSetupHcp] = useState(18);
 
@@ -132,17 +134,16 @@
             const activePlayer = players[activePlayerId] || players[0]; 
             const currentScore = activePlayer?.scores[currentHole] || holeInfo.par;
 
-            // --- FIX 2: STATE IMMUTABILITY (Prevents "Missing Breakdown" Issue) ---
+            // --- ENGINE ---
             const updateScore = (val) => {
+                if(roundStatus === 'finished') return; // LOCK THE SCOREBOARD
+                
                 setPlayers(prevPlayers => {
                     const newPlayers = [...prevPlayers];
-                    // Create a Deep Copy of the active player to ensure React detects the change
                     const updatedPlayer = { ...newPlayers[activePlayerId] };
                     updatedPlayer.scores = { ...updatedPlayer.scores };
-                    
                     const oldScore = updatedPlayer.scores[currentHole] || holeInfo.par;
                     updatedPlayer.scores[currentHole] = Math.max(1, oldScore + val);
-                    
                     newPlayers[activePlayerId] = updatedPlayer;
                     return newPlayers;
                 });
@@ -186,9 +187,8 @@
                 setSetupHcp(18);
             };
 
-            // --- VIEWS ---
+            // --- VIEW LOGIC ---
             if (!user) return (
-                // FIX 1: Use h-[100dvh] for mobile browsers
                 <div className="h-[100dvh] flex flex-col items-center justify-center p-8 bg-emerald-900 text-white bg-[url('https://picsum.photos/800/1200?random=golf')] bg-cover bg-blend-overlay">
                     <div className="text-6xl mb-4 animate-bounce">🏆</div>
                     <h1 className="text-4xl font-black mb-2">MANGAIS</h1>
@@ -208,16 +208,16 @@
                         </div>
                         <div className="absolute bottom-8 left-6 text-white z-10">
                             <h1 className="text-3xl font-bold">{user.displayName ? user.displayName.split(' ')[0] : 'Golfer'}</h1>
-                            <p className="opacity-90 text-sm mt-1">{players.length > 1 ? `${players.length} Players Active` : 'Solo Round'}</p>
+                            <p className="opacity-90 text-sm mt-1">{roundStatus === 'finished' ? 'Round Complete' : (players.length > 1 ? `${players.length} Players Active` : 'Solo Round')}</p>
                         </div>
                     </div>
                     <div className="flex-1 p-6 -mt-10 relative z-10 space-y-4">
                         <button onClick={() => setView('play')} className="w-full bg-white p-6 rounded-2xl shadow-xl flex items-center justify-between border border-emerald-50 active:scale-95 transition">
-                            <div><span className="text-xs font-bold text-emerald-600 uppercase block mb-1">Resume</span><span className="block text-2xl font-black text-slate-800">Play Golf</span></div>
+                            <div><span className="text-xs font-bold text-emerald-600 uppercase block mb-1">{roundStatus === 'finished' ? 'View Final Card' : 'Resume Round'}</span><span className="block text-2xl font-black text-slate-800">Play Golf</span></div>
                             <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-2xl">⛳</div>
                         </button>
                         <div className="grid grid-cols-2 gap-4">
-                            <button onClick={() => setView('setup')} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 active:scale-95 transition"><span className="text-3xl">👥</span><span className="font-bold text-slate-700 text-sm">Flight</span></button>
+                            <button onClick={() => setView('setup')} disabled={roundStatus==='finished'} className={`bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 transition ${roundStatus==='finished' ? 'opacity-50' : 'active:scale-95'}`}><span className="text-3xl">👥</span><span className="font-bold text-slate-700 text-sm">Flight</span></button>
                             <button onClick={() => setView('leaderboard')} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-2 active:scale-95 transition"><span className="text-3xl">🏆</span><span className="font-bold text-slate-700 text-sm">Standings</span></button>
                         </div>
                     </div>
@@ -260,7 +260,7 @@
                         <button onClick={() => setView('home')} className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-full text-slate-600">🏠</button>
                         <div className="text-center">
                             <h2 className="font-black text-xl text-slate-800">HOLE {currentHole}</h2>
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Par {holeInfo.par} • SI {holeInfo.si} • {holeInfo.dist}m</p>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Par {holeInfo.par} • SI {holeInfo.si}</p>
                         </div>
                         <button onClick={() => setView('leaderboard')} className="text-2xl">🏆</button>
                     </div>
@@ -276,7 +276,9 @@
                     </div>
 
                     <div className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-y-auto w-full">
+                        {/* SCORING CARD */}
                         <div className="bg-white w-full max-w-xs p-6 rounded-3xl shadow-xl border border-emerald-50 text-center mb-6 relative overflow-hidden shrink-0">
+                            {roundStatus === 'finished' && <div className="absolute inset-0 bg-white/80 z-20 flex items-center justify-center font-black text-emerald-900 uppercase tracking-widest text-lg backdrop-blur-sm">Round Locked 🔒</div>}
                             <div className="absolute top-0 left-0 w-full h-1.5 bg-emerald-500"></div>
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Scoring for <span className="text-emerald-600">{activePlayer?.name}</span></p>
                             <div className="flex items-center justify-between mb-6">
@@ -308,14 +310,14 @@
                     </div>
 
                     <div className="p-4 bg-white border-t border-slate-200 shrink-0 safe-area-pb">
-                        {currentHole === 18 ? (
-                            <button onClick={() => { if(window.confirm("✍️ Sign Scorecard & Finish Round?")) setView('leaderboard'); }} className="w-full bg-emerald-900 text-white py-4 rounded-xl font-bold text-lg shadow-lg btn-pulse">
-                                ✍️ SIGN SCORECARD
-                            </button>
+                        {roundStatus === 'finished' ? (
+                            <button onClick={() => setView('leaderboard')} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg shadow-lg">View Final Results</button>
                         ) : (
-                            <button onClick={() => { setCurrentHole(c=>c+1); setCaddyMsg(""); }} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition">
-                                NEXT HOLE ➡️
-                            </button>
+                            currentHole === 18 ? (
+                                <button onClick={() => { if(window.confirm("✍️ SIGN SCORECARD?\n\nThis will lock your scores permanently.")) { setRoundStatus('finished'); setView('leaderboard'); }}} className="w-full bg-emerald-900 text-white py-4 rounded-xl font-bold text-lg shadow-lg btn-pulse">✍️ SIGN SCORECARD</button>
+                            ) : (
+                                <button onClick={() => { setCurrentHole(c=>c+1); setCaddyMsg(""); }} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition">NEXT HOLE ➡️</button>
+                            )
                         )}
                     </div>
                 </div>
@@ -326,11 +328,10 @@
                     <div className="bg-emerald-900 p-6 rounded-b-3xl shadow-lg shrink-0 text-white">
                         <div className="flex justify-between items-center mb-6">
                             <button onClick={() => setView('play')} className="text-emerald-200 hover:text-white"><span className="text-2xl">←</span></button>
-                            <h2 className="font-bold text-lg uppercase tracking-widest">Final Standings</h2>
+                            <h2 className="font-bold text-lg uppercase tracking-widest">Standings</h2>
                             <div className="w-6"></div>
                         </div>
                         {players.length > 0 && (() => {
-                            // SAFE SORTING: Copy array first to avoid state mutation bug!
                             const sorted = [...players].sort((a,b) => getTotals(b).pts - getTotals(a).pts);
                             const winner = sorted[0];
                             const winStats = getTotals(winner);
@@ -338,10 +339,10 @@
                                 <div className="text-center pb-2">
                                     <div className="w-20 h-20 bg-yellow-400 rounded-full flex items-center justify-center text-4xl mx-auto mb-3 border-4 border-emerald-800 shadow-xl">🏆</div>
                                     <h3 className="text-3xl font-black">{winner.name}</h3>
-                                    <p className="text-emerald-300 text-xs font-bold uppercase mb-4">Tournament Champion</p>
+                                    <p className="text-emerald-300 text-xs font-bold uppercase mb-4">Champion</p>
                                     <div className="inline-flex bg-emerald-800/50 rounded-lg p-3 gap-6 border border-emerald-700">
                                         <div className="text-center"><span className="block text-xl font-bold">{winStats.gross}</span><span className="text-[9px] uppercase opacity-70">Gross</span></div>
-                                        <div className="text-center"><span className="block text-xl font-bold text-yellow-400">{winStats.pts}</span><span className="text-[9px] uppercase opacity-70 text-yellow-400">Points</span></div>
+                                        <div className="text-center"><span className="block text-xl font-bold text-yellow-400">{winStats.pts}</span><span className="text-[9px] uppercase opacity-70 text-yellow-400">Pts</span></div>
                                     </div>
                                 </div>
                             );
@@ -355,20 +356,44 @@
                         <div className="space-y-2">
                             {[...players].sort((a,b) => getTotals(b).pts - getTotals(a).pts).map((p, i) => {
                                 const stats = getTotals(p);
+                                const isExpanded = expandedPlayerId === p.id;
                                 return (
-                                    <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-100 p-3 grid grid-cols-[30px_1fr_40px_40px_40px] items-center text-center">
-                                        <span className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold mx-auto ${i===0 ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100 text-slate-500'}`}>{i+1}</span>
-                                        <div className="text-left overflow-hidden">
-                                            <span className="block font-bold text-slate-800 text-sm truncate">{p.name}</span>
-                                            <span className="text-[9px] text-slate-400">HCP {p.hcp}</span>
+                                    <div key={p.id} onClick={() => setExpandedPlayerId(isExpanded ? null : p.id)} className="bg-white rounded-xl shadow-sm border border-slate-100 transition-all overflow-hidden cursor-pointer active:scale-[0.98]">
+                                        <div className="p-3 grid grid-cols-[30px_1fr_40px_40px_40px] items-center text-center">
+                                            <span className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold mx-auto ${i===0 ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100 text-slate-500'}`}>{i+1}</span>
+                                            <div className="text-left overflow-hidden">
+                                                <span className="block font-bold text-slate-800 text-sm truncate">{p.name}</span>
+                                                <span className="text-[9px] text-slate-400">HCP {p.hcp}</span>
+                                            </div>
+                                            <span className="text-sm font-bold text-slate-600">{stats.gross}</span>
+                                            <span className="text-sm font-bold text-slate-600">{stats.net}</span>
+                                            <span className="text-lg font-black text-emerald-600">{stats.pts}</span>
                                         </div>
-                                        <span className="text-sm font-bold text-slate-600">{stats.gross}</span>
-                                        <span className="text-sm font-bold text-slate-600">{stats.net}</span>
-                                        <span className="text-lg font-black text-emerald-600">{stats.pts}</span>
+                                        
+                                        {/* EXPANDED SCORECARD VIEW */}
+                                        {isExpanded && (
+                                            <div className="bg-slate-50 border-t border-slate-100 p-3 animate-in slide-in-from-top-2">
+                                                <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider">Hole-by-Hole</h4>
+                                                <div className="grid grid-cols-9 gap-1 text-center">
+                                                    {HOLES.map(h => {
+                                                        const s = p.scores[h.number];
+                                                        return (
+                                                            <div key={h.number} className="flex flex-col items-center">
+                                                                <span className="text-[8px] text-slate-400 mb-0.5">{h.number}</span>
+                                                                <div className={`w-6 h-6 flex items-center justify-center text-[10px] font-bold rounded ${!s ? 'bg-slate-100 text-slate-300' : s < h.par ? 'bg-red-500 text-white' : s > h.par ? 'bg-blue-100 text-blue-700' : 'bg-white border border-slate-200'}`}>
+                                                                    {s || '-'}
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}
                         </div>
+                        <p className="text-center text-xs text-slate-400 mt-4">Tap a player to see their full scorecard.</p>
                     </div>
                     <div className="p-4 bg-white border-t border-slate-200 shrink-0">
                         <button onClick={() => setView('home')} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold shadow-lg">Back to Club 🏠</button>
